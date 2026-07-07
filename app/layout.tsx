@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   title: 'מערכת לוגיסטיקה | Logistics Dashboard',
   description: 'מערכת בקרה ומעקב הזמנות בזמן אמת',
   generator: 'v0.app',
+  manifest: '/manifest.json',
+  themeColor: '#10b981',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SabanOS',
+  },
   icons: {
     icon: [
       {
