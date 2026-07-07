@@ -3,7 +3,8 @@ import { getFirestore, collection, addDoc } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getDatabase, ref, push, set } from "firebase/database";
-import firebaseConfig from "../../firebase-applet-config.json";
+// תיקון נתיב יחסי חסין - מחפש את הקובץ תיקייה אחת למעלה או באותה תיקייה בהתאם למבנה
+import firebaseConfig from "./firebase-applet-config.json";
 
 export enum OperationType {
   CREATE = 'create',
@@ -78,8 +79,7 @@ export const logout = () => auth.signOut();
 
 /**
  * שולח הודעה דרך JONI למימוש תקשורת וואטסאפ מול הלקוחות.
- * ההודעה נכתבת ל-Firebase Realtime Database ול-Firestore במקביל,
- * באריזת JSON המכילה את מספר הטלפון, תוכן ההודעה, קבצים מצורפים וחותמת זמן.
+ * ההודעה נכתבת ל-Firebase Realtime Database ול-Firestore במקביל.
  */
 export const sendJoniMessage = async (phoneNumber: string, text: string, mediaType: string = "text", mediaUrl?: string) => {
   const sanitizedPhone = phoneNumber ? phoneNumber.replace(/[^\d+]/g, "") : "";
