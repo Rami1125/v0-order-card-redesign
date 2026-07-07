@@ -118,19 +118,7 @@ export default function OrdersBoard() {
     }
   };
 
-// הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו כולל תצוגת מחסן
-  const handleMorningReport = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const reportOrders = orders.filter((order) => order.status !== "delivered");
-
-    if (reportOrders.length === 0) {
-      toast.info("לא נמצאו הזמנות פתוחות שטרם נמסרו.");
-      return;
-    }
-
-// הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו כולל תצוגת מחסן
+  // הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו
   const handleMorningReport = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -147,18 +135,13 @@ export default function OrdersBoard() {
     const blocks = reportOrders.map((order) => {
       const driver = order.driverId && order.driverId !== "unassigned" ? order.driverId : "לא משויך";
       const eta = order.eta ? order.eta : "לא נקבעה";
-      
-      // שליפת המחסן - אם מסיבה כלשהי הוא ריק, הוא ייקח את הנתון משדה הצינור החלופי
-      const warehouse = order.warehouse || order.notes || "לא נקבע";
-
       return (
         `📦 *הזמנה #${order.orderNumber}* | ${order.customerName}\n` +
         `📅 *תאריך:* ${order.date}\n` +
-        `🏭 *מחסן יוצא:* ${warehouse}\n` + // השורה החדשה שהוספנו לבקשתך!
         `📍 *יעד:* ${order.destination}\n` +
-        `🚚 *סטטוס:* ${STATUS_LABELS[order.status]} | *נהג:* ${driver}\n` +
+        `🏭 *מחסן יוצא:* ${warehouse}\n` +
+        `🚚|*נהג:* ${driver}\n` +
         `⏰ *שעת אספקה:* ${eta}\n` +
-        `📝 *תכולה:* ${order.items}\n` +
         `---------------------------------------`
       );
     });
@@ -169,7 +152,6 @@ export default function OrdersBoard() {
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
     toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
   };
-
 
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
   const stats = {
@@ -407,7 +389,7 @@ export default function OrdersBoard() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned">לא משויך</SelectItem>
-                        <SelectItem value="חכמת">חכמת (מנוף)</SelectItem>
+                        <SelectItem value="hikmat">חכמת (מנוף)</SelectItem>
                         <SelectItem value="ali">עלי (משאית)</SelectItem>
                         <SelectItem value="yoav">יואב (פיזור מהיר)</SelectItem>
                       </SelectContent>
