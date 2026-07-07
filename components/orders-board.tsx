@@ -12,20 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-"use client";
-
-import React, { useState, useEffect, useRef } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
-import { db } from "../lib/firebase"; // נתיב חסין ומעודכן לפרויקט החדש
-import { motion, AnimatePresence } from "framer-motion"; // תיקון הייבוא היציב ל-Vercel
-import {
-  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
 
 // ממשק הזמנה תואם ב-100% לצינור המידע מה-Apps Script
 interface Order {
