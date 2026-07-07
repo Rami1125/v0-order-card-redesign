@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, query, orderBy, limit } from "f
 import { db } from "../lib/firebase"; 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard
+  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard, AlertCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +47,6 @@ const STATUS_BADGE_CLASSES: Record<Order["status"], string> = {
   cancelled: "bg-rose-500/15 text-rose-400 border-rose-500/30",
 };
 
-// הגדרת השלבים הליניאריים לפס ההתקדמות (Visual Pipeline)
 const PIPELINE_STAGES = [
   { id: "pending", label: "ממתין" },
   { id: "preparing", label: "בהכנה" },
@@ -65,12 +64,21 @@ export default function OrdersBoard() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [viewMode, setViewMode] = useState<"live" | "history">("live");
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const isInitialLoad = useRef(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-200.wav");
+  }, []);
+
+  // שעון רדאר שמתעדכן כל דקה
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -160,6 +168,25 @@ export default function OrdersBoard() {
     
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
     toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
+  };
+
+  // פונקציית רדאר האיחורים האקטיבי
+  const getEtaStatus = (order: Order) => {
+    if (!order.eta || order.status === "delivered" || order.status === "cancelled") return "normal";
+
+    const [etaHours, etaMinutes] = order.eta.split(":").map(Number);
+    if (isNaN(etaHours) || isNaN(etaMinutes)) return "normal";
+
+    const currentHours = currentTime.getHours();
+    const currentMinutes = currentTime.getMinutes();
+
+    const totalEta = etaHours * 60 + etaMinutes;
+    const totalCurrent = currentHours * 60 + currentMinutes;
+    const diff = totalEta - totalCurrent;
+
+    if (diff < 0) return "overdue";
+    if (diff <= 15) return "warning";
+    return "normal";
   };
 
   const stats = {
@@ -350,10 +377,10 @@ export default function OrdersBoard() {
       <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
           {filteredOrders.map((order) => {
-            // חישוב המיקום בפס ההתקדמות
             const currentStageIndex = PIPELINE_STAGES.findIndex(s => s.id === order.status);
             const isCancelled = order.status === "cancelled";
             const progressPercentage = currentStageIndex > 0 ? (currentStageIndex / (PIPELINE_STAGES.length - 1)) * 100 : 0;
+            const etaStatus = getEtaStatus(order);
 
             return (
               <motion.div
@@ -364,12 +391,24 @@ export default function OrdersBoard() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={spring}
               >
-                <Card className={`${t.cardBg} ${t.cardBorder} ${t.cardHover} flex flex-col justify-between transition-colors h-full`}>
-                  <div>
+                <Card className={`relative overflow-hidden ${t.cardBg} ${t.cardBorder} ${t.cardHover} flex flex-col justify-between transition-colors h-full`}>
+                  
+                  {/* רדאר איחורים: אפקט הבהוב בכרטיס */}
+                  {etaStatus === "overdue" && (
+                    <div className="absolute inset-0 rounded-xl border-2 border-rose-500 animate-pulse pointer-events-none z-10" />
+                  )}
+                  {etaStatus === "warning" && (
+                    <div className="absolute inset-0 rounded-xl border-2 border-amber-500 pointer-events-none z-10" />
+                  )}
+
+                  <div className="relative z-20">
                     <CardHeader className={`border-b ${t.innerBorder} pb-3 flex flex-row justify-between items-start space-y-0`}>
                       <div>
                         <span className={`text-xs ${t.muted} block font-mono font-bold`}>#{order.orderNumber}</span>
-                        <CardTitle className={`text-lg font-black ${t.heading} mt-1`}>{order.customerName}</CardTitle>
+                        <CardTitle className={`text-lg font-black ${t.heading} mt-1 flex items-center gap-2`}>
+                          {order.customerName}
+                          {etaStatus === "overdue" && <AlertCircle className="h-4 w-4 text-rose-500 animate-pulse" />}
+                        </CardTitle>
                       </div>
                       <Badge variant="outline" className={`font-bold px-2.5 py-1 ${STATUS_BADGE_CLASSES[order.status]}`}>
                         {STATUS_LABELS[order.status]}
@@ -382,7 +421,6 @@ export default function OrdersBoard() {
                         <span className="font-medium">{order.destination}</span>
                       </div>
 
-                      {/* Visual Order Pipeline (פס התקדמות חזותי) */}
                       <div className="py-2 mb-2 select-none">
                         {isCancelled ? (
                           <div className="w-full bg-rose-500/10 border border-rose-500/20 rounded-md h-8 flex items-center justify-center text-xs text-rose-500 font-bold">
@@ -390,15 +428,11 @@ export default function OrdersBoard() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-between relative px-2">
-                            {/* רקע הפס האפור */}
                             <div className={`absolute left-4 right-4 top-[10px] h-1 ${t.pipelineBg} rounded-full z-0`} />
-                            {/* הפס המתמלא (ירוק) - מתמלא מימין לשמאל בגלל RTL */}
                             <div
                               className="absolute right-4 top-[10px] h-1 bg-emerald-500 rounded-full z-0 transition-all duration-700 ease-in-out"
                               style={{ width: `calc(${progressPercentage}% - 16px)` }}
                             />
-
-                            {/* תחנות בדרך (נקודות וכיתוב) */}
                             {PIPELINE_STAGES.map((stage, idx) => {
                               const isCompleted = currentStageIndex >= idx;
                               const isCurrent = currentStageIndex === idx;
@@ -439,7 +473,7 @@ export default function OrdersBoard() {
                     </CardContent>
                   </div>
 
-                  <div className={`p-4 border-t ${t.innerBorder} ${t.controlBg} grid grid-cols-2 gap-3`}>
+                  <div className={`relative z-20 p-4 border-t ${t.innerBorder} ${t.controlBg} grid grid-cols-2 gap-3`}>
                     <div>
                       <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>נהג משובץ</label>
                       <Select
@@ -478,15 +512,30 @@ export default function OrdersBoard() {
                       </Select>
                     </div>
 
-                    <div className={`col-span-2 flex items-center justify-between mt-1 ${t.innerBg} p-2 rounded border ${t.innerBorder}`}>
+                    <div className={`col-span-2 flex items-center justify-between mt-1 ${
+                      etaStatus === "overdue" ? "bg-rose-500/10 border-rose-500/30" : 
+                      etaStatus === "warning" ? "bg-amber-500/10 border-amber-500/30" : 
+                      t.innerBg
+                    } p-2 rounded border ${etaStatus === "normal" ? t.innerBorder : "border"}`}>
                       <label htmlFor={`eta-${order.id}`} className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold`}>
-                        <Clock className={`h-3.5 w-3.5 ${t.muted}`} />
-                        <span>שעת אספקה מתוכננת:</span>
+                        <Clock className={`h-3.5 w-3.5 ${
+                          etaStatus === "overdue" ? "text-rose-500" : 
+                          etaStatus === "warning" ? "text-amber-500" : 
+                          t.muted
+                        }`} />
+                        <span className={
+                          etaStatus === "overdue" ? "text-rose-500 font-black" : 
+                          etaStatus === "warning" ? "text-amber-500 font-bold" : ""
+                        }>שעת אספקה מתוכננת:</span>
                       </label>
                       <input
                         id={`eta-${order.id}`}
                         type="time"
-                        className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${t.inputText} focus:outline-none focus:border-slate-500`}
+                        className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${
+                          etaStatus === "overdue" ? "text-rose-500 font-bold" : 
+                          etaStatus === "warning" ? "text-amber-500 font-bold" : 
+                          t.inputText
+                        } focus:outline-none focus:border-slate-500`}
                         value={order.eta || ""}
                         onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
                       />
