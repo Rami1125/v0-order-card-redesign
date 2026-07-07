@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
-import { db } from "../lib/firebase"; // נתיב חסין ומעודכן לפרויקט החדש
-import { motion, AnimatePresence } from "motion/react";
+import { db } from "../lib/firebase"; 
+import { motion, AnimatePresence } from "framer-motion"; // שימוש בייבוא הסטנדרטי והיציב
 import {
   Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle,
 } from "lucide-react";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-// ממשק הזמנה תואם ב-100% לצינור המידע מה-Apps Script
+// interface הזמנה תואם ב-100% לצינור המידע
 interface Order {
   id: string;
   orderNumber: string;
@@ -30,7 +30,7 @@ interface Order {
   createdAt: string;
 }
 
-// מילון תרגום סטטוסים: ממפה מפתחות גולמיים ממסד הנתונים לתוויות עבריות מקצועיות
+// מילון תרגום סטטוסים לעברית מלאה
 const STATUS_LABELS: Record<Order["status"], string> = {
   pending: "ממתין",
   preparing: "בהכנה",
@@ -40,7 +40,7 @@ const STATUS_LABELS: Record<Order["status"], string> = {
   cancelled: "בוטל",
 };
 
-// מיפוי צבעי תגית לכל סטטוס (נשען על class ולא על variant כדי לשלוט מדויק בגוונים)
+// מיפוי צבעי תגית לכל סטטוס
 const STATUS_BADGE_CLASSES: Record<Order["status"], string> = {
   pending: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   preparing: "bg-amber-500/15 text-amber-400 border-amber-500/30",
@@ -59,16 +59,15 @@ export default function OrdersBoard() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // שימוש ב-useRef כדי לעקוב אחרי כמות ההזמנות הקודמת ולזהות הזמנה חדשה
   const prevOrdersCount = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // אתחול קובץ השמע להתראה (צליל דיגיטלי נקי וקצר)
+  // אתחול קובץ השמע להתראה
   useEffect(() => {
     audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-200.wav");
   }, []);
 
-  // האזנה בזמן אמת לפרויקט ה-Firebase החדש (whatsapp-8ffd1)
+  // האזנה בזמן אמת לפרויקט ה-Firebase (whatsapp-8ffd1)
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
 
@@ -80,10 +79,10 @@ export default function OrdersBoard() {
           fetchedOrders.push({ id: docSnap.id, ...docSnap.data() } as Order);
         });
 
-        // מנגנון הפעלת צלצול: אם זו לא הטעינה הראשונה וכמות ההזמנות גדלה -> תשמיע צליל
+        // מנגנון הפעלת צלצול בכניסת הזמנה חדשה
         if (prevOrdersCount.current !== null && fetchedOrders.length > prevOrdersCount.current) {
           if (isSoundEnabled && audioRef.current) {
-            audioRef.current.play().catch((err) => console.log("[v0] Sound play blocked:", err));
+            audioRef.current.play().catch((err) => console.log("Sound play blocked:", err));
             toast.success("הזמנה חדשה נכנסה למערכת ח.סבן!");
           }
         }
@@ -99,13 +98,12 @@ export default function OrdersBoard() {
     return () => unsubscribe();
   }, [isSoundEnabled]);
 
-  // עדכון סטטוס, נהג או ETA ישירות לתוך Firebase Firestore
+  // עדכון סטטוס, נהג או ETA ישירות לתוך Firebase
   const handleUpdateOrder = async (orderId: string, field: string, value: string) => {
     try {
       const orderRef = doc(db, "orders", orderId);
       const updates: Record<string, string> = { [field]: value };
 
-      // חוק לוגיסטי: אם משנים סטטוס או נהג, מאפסים את ה-ETA כדי שהנהג החדש יעדכן מחדש
       if (field === "status" || field === "driverId") {
         updates.eta = "";
       }
@@ -118,9 +116,12 @@ export default function OrdersBoard() {
     }
   };
 
-  // הפקת "דוח בוקר" לוואטסאפ: מסנן הזמנות שטרם נמסרו ומתוזמנות למחר, ובונה הודעה מובנית
-  const handleMorningReport = () => {
-    // חישוב תאריך "מחר" דינמית בפורמט dd/MM/yyyy כדי להתאים למבנה השדה order.date
+  // הפקת "דוח בוקר" לוואטסאפ של כל הזמנות מחר שלא נמסרו
+  const handleMorningReport = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // מניעת זליגת אירועים שחוסמת את הכפתור
+
+    // חישוב תאריך "מחר" דינמית בפורמט dd/MM/yyyy
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dd = String(tomorrow.getDate()).padStart(2, "0");
@@ -128,20 +129,18 @@ export default function OrdersBoard() {
     const yyyy = tomorrow.getFullYear();
     const tomorrowStr = `${dd}/${mm}/${yyyy}`;
 
-    // סינון: הזמנות שלא נמסרו ותאריך האספקה שלהן הוא בדיוק מחר
+    // סינון: הזמנות שלא נמסרו ותאריך האספקה שלהן הוא מחר
     const reportOrders = orders.filter(
       (order) => order.status !== "delivered" && order.date === tomorrowStr
     );
 
-    // אם אין הזמנות תואמות - הודעת טוסט ידידותית ועצירה
     if (reportOrders.length === 0) {
-      toast.info("לא נמצאו הזמנות למחר שטרם נמסרו.");
+      toast.info(`לא נמצאו הזמנות לוגיסטיות למחר (${tomorrowStr}) שטרם נמסרו.`);
       return;
     }
 
-    // בניית מבנה ההודעה המקצועי בעברית עם אימוג'ים ברורים
-    const header =
-      "☀️ *דוח סידור בוקר - ח.סבן לוגיסטיקה (למחר)* ☀️\n---------------------------------------";
+    // בניית מבנה ההודעה המקצועי לקבוצת הוואטסאפ
+    const header = `☀️ *דוח סידור בוקר - ח.סבן לוגיסטיקה (${tomorrowStr})* ☀️\n---------------------------------------`;
 
     const blocks = reportOrders.map((order) => {
       const driver = order.driverId && order.driverId !== "unassigned" ? order.driverId : "לא משויך";
@@ -157,14 +156,14 @@ export default function OrdersBoard() {
     });
 
     const fullMessage = `${header}\n${blocks.join("\n")}`;
-
-    // קידוד מלא של הטקסט ופתיחת וואטסאפ בלשונית חדשה לשליחה מיידית לקבוצת הלוגיסטיקה
     const encodedText = encodeURIComponent(fullMessage);
+    
+    // פתיחת וואטסאפ ישירות בקבוצה
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
-    toast.success(`הופק דוח בוקר עבור ${reportOrders.length} הזמנות למחר`);
+    toast.success(`הופק דוח בוקר עבור ${reportOrders.length} הזמנות למחר!`);
   };
 
-  // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
+  // חישוב מוני ה-KPI
   const stats = {
     total: orders.length,
     preparing: orders.filter((o) => o.status === "preparing" || o.status === "pending").length,
@@ -183,7 +182,7 @@ export default function OrdersBoard() {
     return matchesSearch && matchesStatus;
   });
 
-  // ערכת נושא דינמית: משטחים, גבולות וטיפוגרפיה מתחלפים בין כהה לבהיר
+  // ערכת נושא דינמית (בהיר/כהה)
   const t = isDarkMode
     ? {
         page: "bg-slate-950 text-slate-100",
@@ -226,18 +225,18 @@ export default function OrdersBoard() {
 
   return (
     <div className={`p-6 min-h-screen transition-colors duration-500 ${t.page}`} dir="rtl">
-      {/* כותרת ראשית + כפתורי שליטה (ערכת נושא + התראות קוליות) */}
-      <div className={`flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8 border-b ${t.border} pb-4`}>
+      {/* סרגל כלים עליון קבוע מעל האנימציות למניעת חסימת לחיצות */}
+      <div className={`relative z-50 flex flex-col lg:flex-row justify-between lg:items-center gap-4 mb-8 border-b ${t.border} pb-4`}>
         <div>
-          <h1 className={`text-3xl font-black tracking-tight ${t.heading}`}>SabanOS Dashboard</h1>
+          <h1 className={`text-3xl font-black tracking-tight ${t.heading}`}>לוח בקרה ח.סבן לוגיסטיקה</h1>
           <p className={`${t.subtle} text-sm mt-1`}>
-            ניהול והפצת הזמנות לוגיסטיות בזמן אמת | סניפי הוד השרון
+            ניהול והפצת הזמנות לוגיסטיות בזמן אמת | מחובר ל-SabanOS
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             onClick={handleMorningReport}
-            className="flex items-center gap-2 font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+            className="flex items-center gap-2 font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-md transition-all active:scale-95"
           >
             <MessageCircle className="h-4 w-4" />
             הפקת דוח בוקר לוואטסאפ
@@ -299,7 +298,7 @@ export default function OrdersBoard() {
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className={`w-full md:w-[200px] ${t.inputBg} ${t.inputBorder} ${t.inputText}`}>
-            <SelectValue placeholder="סנן ל��י סטטוס" />
+            <SelectValue placeholder="סנן לפי סטטוס" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל הסטטוסים</SelectItem>
@@ -313,7 +312,7 @@ export default function OrdersBoard() {
         </Select>
       </div>
 
-      {/* רשת כרטיסי ההזמנות החיה עם אנימציית פריסה חלקה */}
+      {/* רשת כרטיסי ההזמנות החיה עם אנימציית פריסה חלקה ומאובטחת */}
       <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
           {filteredOrders.map((order) => (
@@ -329,10 +328,10 @@ export default function OrdersBoard() {
                 <div>
                   <CardHeader className={`border-b ${t.innerBorder} pb-3 flex flex-row justify-between items-start space-y-0`}>
                     <div>
-                      <span className={`text-xs ${t.muted} block font-mono`}>#{order.orderNumber}</span>
-                      <CardTitle className={`text-lg font-bold ${t.heading} mt-1`}>{order.customerName}</CardTitle>
+                      <span className={`text-xs ${t.muted} block font-mono font-bold`}>#{order.orderNumber}</span>
+                      <CardTitle className={`text-lg font-black ${t.heading} mt-1`}>{order.customerName}</CardTitle>
                     </div>
-                    <Badge variant="outline" className={`font-bold ${STATUS_BADGE_CLASSES[order.status]}`}>
+                    <Badge variant="outline" className={`font-bold px-2.5 py-1 ${STATUS_BADGE_CLASSES[order.status]}`}>
                       {STATUS_LABELS[order.status]}
                     </Badge>
                   </CardHeader>
@@ -341,7 +340,7 @@ export default function OrdersBoard() {
                     {/* כתובת יעד */}
                     <div className={`flex items-start gap-2 ${t.value}`}>
                       <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
-                      <span>{order.destination}</span>
+                      <span className="font-medium">{order.destination}</span>
                     </div>
 
                     {/* תכולת המשלוח */}
@@ -355,16 +354,16 @@ export default function OrdersBoard() {
                       </div>
                     </div>
 
-                    {/* הערות מיוחדות אם יש */}
+                    {/* הערות מיוחדות ומחסן יוצא */}
                     {order.notes && (
-                      <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 p-2 rounded">
-                        <strong>הערה:</strong> {order.notes}
+                      <div className="text-xs text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 p-2 rounded">
+                        ℹ️ {order.notes}
                       </div>
                     )}
                   </CardContent>
                 </div>
 
-                {/* בקרי שליטה ושינוי בשטח (נהג, סטטוס, ETA) */}
+                {/* בקרי שליטה ושינוי בשטח */}
                 <div className={`p-4 border-t ${t.innerBorder} ${t.controlBg} grid grid-cols-2 gap-3`}>
                   <div>
                     <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>נהג משובץ</label>
@@ -372,7 +371,7 @@ export default function OrdersBoard() {
                       value={order.driverId || "unassigned"}
                       onValueChange={(val) => handleUpdateOrder(order.id, "driverId", val)}
                     >
-                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs ${t.inputText}`}>
+                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -390,21 +389,21 @@ export default function OrdersBoard() {
                       value={order.status}
                       onValueChange={(val) => handleUpdateOrder(order.id, "status", val)}
                     >
-                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs ${t.inputText}`}>
+                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">{STATUS_LABELS.pending}</SelectItem>
-                        <SelectItem value="preparing">{STATUS_LABELS.preparing}</SelectItem>
-                        <SelectItem value="ready">{STATUS_LABELS.ready}</SelectItem>
-                        <SelectItem value="on_the_way">{STATUS_LABELS.on_the_way}</SelectItem>
-                        <SelectItem value="delivered">{STATUS_LABELS.delivered}</SelectItem>
-                        <SelectItem value="cancelled">{STATUS_LABELS.cancelled}</SelectItem>
+                        <SelectItem value="pending">ממתין</SelectItem>
+                        <SelectItem value="preparing">בהכנה</SelectItem>
+                        <SelectItem value="ready">מוכן להעמסה</SelectItem>
+                        <SelectItem value="on_the_way">בדרך לשטח</SelectItem>
+                        <SelectItem value="delivered">נמסר</SelectItem>
+                        <SelectItem value="cancelled">בוטל</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* בורר שעה מובנה - קורא וכותב ישירות לשדה order.eta בפורמט HH:mm */}
+                  {/* בורר שעה מובנה */}
                   <div className={`col-span-2 flex items-center justify-between mt-1 ${t.innerBg} p-2 rounded border ${t.innerBorder}`}>
                     <label htmlFor={`eta-${order.id}`} className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold`}>
                       <Clock className={`h-3.5 w-3.5 ${t.muted}`} />
@@ -413,7 +412,7 @@ export default function OrdersBoard() {
                     <input
                       id={`eta-${order.id}`}
                       type="time"
-                      className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs ${t.inputText} focus:outline-none focus:border-slate-500`}
+                      className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${t.inputText} focus:outline-none focus:border-slate-500`}
                       value={order.eta || ""}
                       onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
                     />
