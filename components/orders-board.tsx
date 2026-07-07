@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase
 import { db } from "../lib/firebase"; // נתיב חסין ומעודכן לפרויקט החדש
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon,
+  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,52 @@ export default function OrdersBoard() {
     }
   };
 
+  // הפקת "דוח בוקר" לוואטסאפ: מסנן הזמנות שטרם נמסרו ומתוזמנות למחר, ובונה הודעה מובנית
+  const handleMorningReport = () => {
+    // חישוב תאריך "מחר" דינמית בפורמט dd/MM/yyyy כדי להתאים למבנה השדה order.date
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dd = String(tomorrow.getDate()).padStart(2, "0");
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const yyyy = tomorrow.getFullYear();
+    const tomorrowStr = `${dd}/${mm}/${yyyy}`;
+
+    // סינון: הזמנות שלא נמסרו ותאריך האספקה שלהן הוא בדיוק מחר
+    const reportOrders = orders.filter(
+      (order) => order.status !== "delivered" && order.date === tomorrowStr
+    );
+
+    // אם אין הזמנות תואמות - הודעת טוסט ידידותית ועצירה
+    if (reportOrders.length === 0) {
+      toast.info("לא נמצאו הזמנות למחר שטרם נמסרו.");
+      return;
+    }
+
+    // בניית מבנה ההודעה המקצועי בעברית עם אימוג'ים ברורים
+    const header =
+      "☀️ *דוח סידור בוקר - ח.סבן לוגיסטיקה (למחר)* ☀️\n---------------------------------------";
+
+    const blocks = reportOrders.map((order) => {
+      const driver = order.driverId && order.driverId !== "unassigned" ? order.driverId : "לא משויך";
+      const eta = order.eta ? order.eta : "לא נקבעה";
+      return (
+        `📦 *הזמנה #${order.orderNumber}* | ${order.customerName}\n` +
+        `📍 *יעד:* ${order.destination}\n` +
+        `🚚 *סטטוס:* ${STATUS_LABELS[order.status]} | *נהג:* ${driver}\n` +
+        `⏰ *שעת אספקה:* ${eta}\n` +
+        `📝 *תכולה:* ${order.items}\n` +
+        `---------------------------------------`
+      );
+    });
+
+    const fullMessage = `${header}\n${blocks.join("\n")}`;
+
+    // קידוד מלא של הטקסט ופתיחת וואטסאפ בלשונית חדשה לשליחה מיידית לקבוצת הלוגיסטיקה
+    const encodedText = encodeURIComponent(fullMessage);
+    window.open(`https://wa.me/?text=${encodedText}`, "_blank");
+    toast.success(`הופק דוח בוקר עבור ${reportOrders.length} הזמנות למחר`);
+  };
+
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
   const stats = {
     total: orders.length,
@@ -190,6 +236,13 @@ export default function OrdersBoard() {
         </div>
         <div className="flex items-center gap-3">
           <Button
+            onClick={handleMorningReport}
+            className="flex items-center gap-2 font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+          >
+            <MessageCircle className="h-4 w-4" />
+            הפקת דוח בוקר לוואטסאפ
+          </Button>
+          <Button
             variant="outline"
             onClick={() => setIsDarkMode((v) => !v)}
             className="flex items-center gap-2 font-bold"
@@ -246,7 +299,7 @@ export default function OrdersBoard() {
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className={`w-full md:w-[200px] ${t.inputBg} ${t.inputBorder} ${t.inputText}`}>
-            <SelectValue placeholder="סנן לפי סטטוס" />
+            <SelectValue placeholder="סנן ל��י סטטוס" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל הסטטוסים</SelectItem>
