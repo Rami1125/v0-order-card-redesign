@@ -215,7 +215,7 @@ export default function OrdersBoard() {
                 {/* הערות מיוחדות אם יש */}
                 {order.notes && (
                   <div className="text-xs text-amber-400 bg-amber-950/20 border border-amber-900/30 p-2 rounded">
-                    <strong>הערה:</strong> {order.notes}
+                    <strong>🏭 :</strong> {order.notes}
                   </div>
                 )}
               </CardContent>
@@ -235,8 +235,7 @@ export default function OrdersBoard() {
                   <SelectContent className="bg-slate-950 border-slate-800 text-white">
                     <SelectItem value="unassigned">לא משויך</SelectItem>
                     <SelectItem value="hikmat">חכמת (מנוף)</SelectItem>
-                    <SelectItem value="ali">עלי (משאית)</SelectItem>
-                    <SelectItem value="yoav">יואב (פיזור מהיר)</SelectItem>
+                    <SelectItem value="ali">עלי (משאית)</SelectItem>          
                   </SelectContent>
                 </Select>
               </div>
