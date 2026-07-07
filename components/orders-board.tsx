@@ -158,12 +158,6 @@ export default function OrdersBoard() {
   };
     });
 
-    const fullMessage = `${header}\n${blocks.join("\n")}`;
-    const encodedText = encodeURIComponent(fullMessage);
-    
-    window.open(`https://wa.me/?text=${encodedText}`, "_blank");
-    toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
-  };
 
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
   const stats = {
