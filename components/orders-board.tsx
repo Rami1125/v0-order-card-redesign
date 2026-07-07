@@ -24,7 +24,7 @@ interface Order {
   items: string;
   driverId: string;
   warehouse: string;
-  status: 'pending' | 'preparing' | 'ready' | 'on_the_way' | 'delivered' | 'cancelled';
+  status: 'ממתין' | 'preparing' | 'ready' | 'on_the_way' | 'delivered' | 'cancelled';
   eta: string;
   notes?: string;
   createdAt: string;
@@ -114,7 +114,7 @@ export default function OrdersBoard() {
       {/* כותרת ראשית + כפתור שליטה בסאונד של ההתראות */}
       <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-white">SabanOS Dashboard</h1>
+          <h1 className="text-3xl font-black tracking-tight text-white">סידור ח.סבן </h1>
           <p className="text-slate-400 text-sm mt-1">ניהול והפצת הזמנות לוגיסטיות בזמן אמת | סניפי הוד השרון</p>
         </div>
         <Button 
