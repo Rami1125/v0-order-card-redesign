@@ -183,7 +183,7 @@ export default function OrdersBoard() {
       {/* כותרת ראשית + כפתורי שליטה (ערכת נושא + התראות קוליות) */}
       <div className={`flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8 border-b ${t.border} pb-4`}>
         <div>
-          <h1 className={`text-3xl font-black tracking-tight ${t.heading}`}>SabanOS Dashboard</h1>
+          <h1 className={`text-3xl font-black tracking-tight ${t.heading}`}>סידור ח.סבן</h1>
           <p className={`${t.subtle} text-sm mt-1`}>
             ניהול והפצת הזמנות לוגיסטיות בזמן אמת | סניפי הוד השרון
           </p>
@@ -305,7 +305,7 @@ export default function OrdersBoard() {
                     {/* הערות מיוחדות אם יש */}
                     {order.notes && (
                       <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 p-2 rounded">
-                        <strong>הערה:</strong> {order.notes}
+                        <strong>🏭:</strong> {order.notes}
                       </div>
                     )}
                   </CardContent>
