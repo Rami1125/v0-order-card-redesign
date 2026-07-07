@@ -370,7 +370,7 @@ export default function OrdersBoard() {
                     {/* הערות מיוחדות אם יש */}
                     {order.notes && (
                       <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 p-2 rounded">
-                        <strong>הערה:</strong> {order.notes}
+                        <strong>🏭:</strong> {order.notes}
                       </div>
                     )}
                   </CardContent>
