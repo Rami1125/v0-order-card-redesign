@@ -8,9 +8,9 @@ import {
   MapPin, User, FileText, Search, Volume2, VolumeX 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/components/ui/badge";
-import { Button } from "@/components/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 // ממשק הזמנה תואם ב-100% לצינור המידע מה-Apps Script
