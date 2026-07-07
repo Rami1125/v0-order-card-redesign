@@ -118,7 +118,9 @@ export default function OrdersBoard() {
     }
   };
 
-  // הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו
+
+
+// הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו - גרסה ממוקדת ומקוצרת
   const handleMorningReport = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -130,18 +132,20 @@ export default function OrdersBoard() {
       return;
     }
 
-    const header = "☀️ *דוח בוקר-סידור * ☀️\n---------------------------------------";
+    const header = "☀️ *דוח סידור עבודה - ח.סבן לוגיסטיקה* ☀️\n---------------------------------------";
 
     const blocks = reportOrders.map((order) => {
       const driver = order.driverId && order.driverId !== "unassigned" ? order.driverId : "לא משויך";
       const eta = order.eta ? order.eta : "לא נקבעה";
+      const warehouse = order.warehouse || order.notes || "לא נקבע";
+
       return (
         `📦 *הזמנה #${order.orderNumber}* | ${order.customerName}\n` +
         `📅 *תאריך:* ${order.date}\n` +
-        `📍 *יעד:* ${order.destination}\n` +
         `🏭 *מחסן יוצא:* ${warehouse}\n` +
-        `🚚|*נהג:* ${driver}\n` +
-        `⏰ *שעת אספקה:* ${eta}\n` +
+        `📍 *יעד:* ${order.destination}\n` +
+        `🚚 *נהג משובץ:* ${driver}\n` + // השארנו רק את הנהג, מחקנו את הסטטוס הלוגיסטי
+        `⏰ *שעת אספקה:* ${eta}\n` +     // שורת התכולה שהייתה כאן הוסרה לחלוטין
         `---------------------------------------`
       );
     });
@@ -152,7 +156,6 @@ export default function OrdersBoard() {
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
     toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
   };
-
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
   const stats = {
     total: orders.length,
