@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-
 // ממשק הזמנה תואם ב-100% לצינור המידע מה-Apps Script
 interface Order {
   id: string;
@@ -69,7 +68,7 @@ export default function OrdersBoard() {
     audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-200.wav");
   }, []);
 
-  // האזנה בזמן אמת לפרויקט ה-Firebase (whatsapp-8ffd1)
+  // האזנה בזמן אמת לפרויקט ה-Firebase החדש (whatsapp-8ffd1)
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
 
@@ -104,7 +103,7 @@ export default function OrdersBoard() {
   const handleUpdateOrder = async (orderId: string, field: string, value: string) => {
     try {
       const orderRef = doc(db, "orders", orderId);
-      const updates: Record<string, string> = { [field]: value };
+      const updates: any = { [field]: value };
 
       if (field === "status" || field === "driverId") {
         updates.eta = "";
@@ -118,9 +117,7 @@ export default function OrdersBoard() {
     }
   };
 
-
-
-// הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו - גרסה ממוקדת ומקוצרת
+  // הפקת דוח לוואטסאפ ללא תכולה וללא סטטוס - כולל מחסן לכל ההזמנות הפתוחות
   const handleMorningReport = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -144,8 +141,8 @@ export default function OrdersBoard() {
         `📅 *תאריך:* ${order.date}\n` +
         `🏭 *מחסן יוצא:* ${warehouse}\n` +
         `📍 *יעד:* ${order.destination}\n` +
-        `🚚 *נהג משובץ:* ${driver}\n` + // השארנו רק את הנהג, מחקנו את הסטטוס הלוגיסטי
-        `⏰ *שעת אספקה:* ${eta}\n` +     // שורת התכולה שהייתה כאן הוסרה לחלוטין
+        `🚚 *נהג משובץ:* ${driver}\n` +
+        `⏰ *שעת אספקה:* ${eta}\n` +
         `---------------------------------------`
       );
     });
@@ -156,6 +153,7 @@ export default function OrdersBoard() {
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
     toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
   };
+
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
   const stats = {
     total: orders.length,
@@ -240,7 +238,6 @@ export default function OrdersBoard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {/* כפתור מעבר בין לוח פעיל להיסטוריית ארכיון */}
           <Button
             onClick={() => setViewMode((v) => v === "live" ? "history" : "live")}
             variant="outline"
@@ -344,10 +341,10 @@ export default function OrdersBoard() {
                 <div>
                   <CardHeader className={`border-b ${t.innerBorder} pb-3 flex flex-row justify-between items-start space-y-0`}>
                     <div>
-                      <span className={`text-xs ${t.muted} block font-mono`}>#{order.orderNumber}</span>
-                      <CardTitle className={`text-lg font-bold ${t.heading} mt-1`}>{order.customerName}</CardTitle>
+                      <span className={`text-xs ${t.muted} block font-mono font-bold`}>#{order.orderNumber}</span>
+                      <CardTitle className={`text-lg font-black ${t.heading} mt-1`}>{order.customerName}</CardTitle>
                     </div>
-                    <Badge variant="outline" className={`font-bold ${STATUS_BADGE_CLASSES[order.status]}`}>
+                    <Badge variant="outline" className={`font-bold px-2.5 py-1 ${STATUS_BADGE_CLASSES[order.status]}`}>
                       {STATUS_LABELS[order.status]}
                     </Badge>
                   </CardHeader>
@@ -356,7 +353,7 @@ export default function OrdersBoard() {
                     {/* כתובת יעד */}
                     <div className={`flex items-start gap-2 ${t.value}`}>
                       <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
-                      <span>{order.destination}</span>
+                      <span className="font-medium">{order.destination}</span>
                     </div>
 
                     {/* תכולת המשלוח */}
@@ -370,10 +367,10 @@ export default function OrdersBoard() {
                       </div>
                     </div>
 
-                    {/* הערות מיוחדות אם יש */}
+                    {/* הערות ומחסן יוצא */}
                     {order.notes && (
-                      <div className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 p-2 rounded">
-                        <strong>🏭:</strong> {order.notes}
+                      <div className="text-xs text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 p-2 rounded">
+                        ℹ️ {order.notes}
                       </div>
                     )}
                   </CardContent>
@@ -387,7 +384,7 @@ export default function OrdersBoard() {
                       value={order.driverId || "unassigned"}
                       onValueChange={(val) => handleUpdateOrder(order.id, "driverId", val)}
                     >
-                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs ${t.inputText}`}>
+                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -405,16 +402,16 @@ export default function OrdersBoard() {
                       value={order.status}
                       onValueChange={(val) => handleUpdateOrder(order.id, "status", val)}
                     >
-                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs ${t.inputText}`}>
+                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">{STATUS_LABELS.pending}</SelectItem>
-                        <SelectItem value="preparing">{STATUS_LABELS.preparing}</SelectItem>
-                        <SelectItem value="ready">{STATUS_LABELS.ready}</SelectItem>
-                        <SelectItem value="on_the_way">{STATUS_LABELS.on_the_way}</SelectItem>
-                        <SelectItem value="delivered">{STATUS_LABELS.delivered}</SelectItem>
-                        <SelectItem value="cancelled">{STATUS_LABELS.cancelled}</SelectItem>
+                        <SelectItem value="pending">ממתין</SelectItem>
+                        <SelectItem value="preparing">בהכנה</SelectItem>
+                        <SelectItem value="ready">מוכן להעמסה</SelectItem>
+                        <SelectItem value="on_the_way">בדרך לשטח</SelectItem>
+                        <SelectItem value="delivered">נמסר</SelectItem>
+                        <SelectItem value="cancelled">בוטל</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -428,7 +425,7 @@ export default function OrdersBoard() {
                     <input
                       id={`eta-${order.id}`}
                       type="time"
-                      className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs ${t.inputText} focus:outline-none focus:border-slate-500`}
+                      className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${t.inputText} focus:outline-none focus:border-slate-500`}
                       value={order.eta || ""}
                       onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
                     />
