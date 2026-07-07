@@ -118,7 +118,7 @@ export default function OrdersBoard() {
     }
   };
 
-  // הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו
+// הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו כולל תצוגת מחסן
   const handleMorningReport = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -135,14 +135,27 @@ export default function OrdersBoard() {
     const blocks = reportOrders.map((order) => {
       const driver = order.driverId && order.driverId !== "unassigned" ? order.driverId : "לא משויך";
       const eta = order.eta ? order.eta : "לא נקבעה";
+      
+      // שליפת המחסן - אם מסיבה כלשהי הוא ריק, הוא ייקח את הנתון משדה הצינור החלופי
+      const warehouse = order.warehouse || order.notes || "לא נקבע";
+
       return (
         `📦 *הזמנה #${order.orderNumber}* | ${order.customerName}\n` +
         `📅 *תאריך:* ${order.date}\n` +
+        `🏭 *מחסן יוצא:* ${warehouse}\n` + // השורה החדשה שהוספנו לבקשתך!
         `📍 *יעד:* ${order.destination}\n` +
-        `🚚|*נהג:* ${driver}\n` +
+        `🚚 *|*נהג:* ${driver}\n` +
         `⏰ *שעת אספקה:* ${eta}\n` +
         `---------------------------------------`
       );
+    });
+
+    const fullMessage = `${header}\n${blocks.join("\n")}`;
+    const encodedText = encodeURIComponent(fullMessage);
+    
+    window.open(`https://wa.me/?text=${encodedText}`, "_blank");
+    toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
+  };
     });
 
     const fullMessage = `${header}\n${blocks.join("\n")}`;
