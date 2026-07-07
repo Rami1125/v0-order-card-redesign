@@ -94,7 +94,7 @@ export default function OrdersBoard() {
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
   const stats = {
     total: orders.length,
-    preparing: orders.filter(o => o.status === 'preparing' || o.status === 'pending').length,
+    preparing: orders.filter(o => o.status === 'preparing' || o.status === 'ממתין').length,
     ready: orders.filter(o => o.status === 'ready').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
     noDriver: orders.filter(o => !o.driverId || o.driverId === 'unassigned').length
