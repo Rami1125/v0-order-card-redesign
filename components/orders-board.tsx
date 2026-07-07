@@ -47,6 +47,15 @@ const STATUS_BADGE_CLASSES: Record<Order["status"], string> = {
   cancelled: "bg-rose-500/15 text-rose-400 border-rose-500/30",
 };
 
+// הגדרת השלבים הליניאריים לפס ההתקדמות (Visual Pipeline)
+const PIPELINE_STAGES = [
+  { id: "pending", label: "ממתין" },
+  { id: "preparing", label: "בהכנה" },
+  { id: "ready", label: "מוכן" },
+  { id: "on_the_way", label: "בדרך" },
+  { id: "delivered", label: "נמסר" },
+];
+
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 export default function OrdersBoard() {
@@ -169,7 +178,6 @@ export default function OrdersBoard() {
     }
   });
 
-  // לוגיקת הסינון הורחבה כדי לתמוך בכפתורי ה-KPI המרוכזים
   const filteredOrders = viewFilteredOrders.filter((order) => {
     const matchesSearch =
       order.customerName.toLowerCase().includes(search.toLowerCase()) ||
@@ -204,6 +212,9 @@ export default function OrdersBoard() {
         muted: "text-slate-500",
         label: "text-slate-500",
         value: "text-slate-300",
+        pipelineBg: "bg-slate-800",
+        pipelineEmpty: "bg-slate-900",
+        pipelineBorder: "border-slate-700",
       }
     : {
         page: "bg-slate-50 text-slate-900",
@@ -223,9 +234,11 @@ export default function OrdersBoard() {
         muted: "text-slate-400",
         label: "text-slate-500",
         value: "text-slate-700",
+        pipelineBg: "bg-slate-200",
+        pipelineEmpty: "bg-white",
+        pipelineBorder: "border-slate-300",
       };
 
-  // פונקציית עזר לייצור הסטייל של כפתורי הסטטוס הלחיצים
   const getKpiCardStyle = (targetStatus: string, ringColor: string) => {
     const isActive = filterStatus === targetStatus;
     return `cursor-pointer transition-all duration-200 select-none active:scale-95 ${
@@ -282,7 +295,6 @@ export default function OrdersBoard() {
         </div>
       </div>
 
-      {/* כרטיסי KPI לחיצים המשמשים כסינון מהיר */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <Card onClick={() => setFilterStatus("all")} className={getKpiCardStyle("all", "ring-slate-400")}>
           <CardHeader className="pb-2"><CardTitle className={`text-xs ${t.subtle}`}>כל ההזמנות</CardTitle></CardHeader>
@@ -337,107 +349,153 @@ export default function OrdersBoard() {
 
       <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
-          {filteredOrders.map((order) => (
-            <motion.div
-              key={order.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={spring}
-            >
-              <Card className={`${t.cardBg} ${t.cardBorder} ${t.cardHover} flex flex-col justify-between transition-colors h-full`}>
-                <div>
-                  <CardHeader className={`border-b ${t.innerBorder} pb-3 flex flex-row justify-between items-start space-y-0`}>
+          {filteredOrders.map((order) => {
+            // חישוב המיקום בפס ההתקדמות
+            const currentStageIndex = PIPELINE_STAGES.findIndex(s => s.id === order.status);
+            const isCancelled = order.status === "cancelled";
+            const progressPercentage = currentStageIndex > 0 ? (currentStageIndex / (PIPELINE_STAGES.length - 1)) * 100 : 0;
+
+            return (
+              <motion.div
+                key={order.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={spring}
+              >
+                <Card className={`${t.cardBg} ${t.cardBorder} ${t.cardHover} flex flex-col justify-between transition-colors h-full`}>
+                  <div>
+                    <CardHeader className={`border-b ${t.innerBorder} pb-3 flex flex-row justify-between items-start space-y-0`}>
+                      <div>
+                        <span className={`text-xs ${t.muted} block font-mono font-bold`}>#{order.orderNumber}</span>
+                        <CardTitle className={`text-lg font-black ${t.heading} mt-1`}>{order.customerName}</CardTitle>
+                      </div>
+                      <Badge variant="outline" className={`font-bold px-2.5 py-1 ${STATUS_BADGE_CLASSES[order.status]}`}>
+                        {STATUS_LABELS[order.status]}
+                      </Badge>
+                    </CardHeader>
+
+                    <CardContent className="pt-4 space-y-4 text-sm">
+                      <div className={`flex items-start gap-2 ${t.value}`}>
+                        <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
+                        <span className="font-medium">{order.destination}</span>
+                      </div>
+
+                      {/* Visual Order Pipeline (פס התקדמות חזותי) */}
+                      <div className="py-2 mb-2 select-none">
+                        {isCancelled ? (
+                          <div className="w-full bg-rose-500/10 border border-rose-500/20 rounded-md h-8 flex items-center justify-center text-xs text-rose-500 font-bold">
+                            הזמנה בוטלה
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between relative px-2">
+                            {/* רקע הפס האפור */}
+                            <div className={`absolute left-4 right-4 top-[10px] h-1 ${t.pipelineBg} rounded-full z-0`} />
+                            {/* הפס המתמלא (ירוק) - מתמלא מימין לשמאל בגלל RTL */}
+                            <div
+                              className="absolute right-4 top-[10px] h-1 bg-emerald-500 rounded-full z-0 transition-all duration-700 ease-in-out"
+                              style={{ width: `calc(${progressPercentage}% - 16px)` }}
+                            />
+
+                            {/* תחנות בדרך (נקודות וכיתוב) */}
+                            {PIPELINE_STAGES.map((stage, idx) => {
+                              const isCompleted = currentStageIndex >= idx;
+                              const isCurrent = currentStageIndex === idx;
+                              return (
+                                <div key={stage.id} className="relative z-10 flex flex-col items-center gap-1.5 w-10">
+                                  <div
+                                    className={`w-3.5 h-3.5 rounded-full border-[3px] transition-all duration-500 ${
+                                      isCompleted
+                                        ? "bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                                        : `${t.pipelineEmpty} ${t.pipelineBorder}`
+                                    } ${isCurrent ? "scale-150 ring-2 ring-emerald-500/30" : ""}`}
+                                  />
+                                  <span className={`text-[10px] font-bold whitespace-nowrap ${isCurrent ? "text-emerald-500" : t.muted}`}>
+                                    {stage.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className={`${t.innerBg} p-3 rounded-lg border ${t.innerBorder}`}>
+                        <div className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold mb-2`}>
+                          <Package className="h-3.5 w-3.5" />
+                          <span>תכולת המשלוח</span>
+                        </div>
+                        <div className={`font-mono text-xs ${t.value} whitespace-pre-wrap leading-relaxed`}>
+                          {order.items}
+                        </div>
+                      </div>
+
+                      {order.notes && (
+                        <div className="text-xs text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 p-2 rounded">
+                          ℹ️ {order.notes}
+                        </div>
+                      )}
+                    </CardContent>
+                  </div>
+
+                  <div className={`p-4 border-t ${t.innerBorder} ${t.controlBg} grid grid-cols-2 gap-3`}>
                     <div>
-                      <span className={`text-xs ${t.muted} block font-mono font-bold`}>#{order.orderNumber}</span>
-                      <CardTitle className={`text-lg font-black ${t.heading} mt-1`}>{order.customerName}</CardTitle>
-                    </div>
-                    <Badge variant="outline" className={`font-bold px-2.5 py-1 ${STATUS_BADGE_CLASSES[order.status]}`}>
-                      {STATUS_LABELS[order.status]}
-                    </Badge>
-                  </CardHeader>
-
-                  <CardContent className="pt-4 space-y-4 text-sm">
-                    <div className={`flex items-start gap-2 ${t.value}`}>
-                      <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
-                      <span className="font-medium">{order.destination}</span>
-                    </div>
-
-                    <div className={`${t.innerBg} p-3 rounded-lg border ${t.innerBorder}`}>
-                      <div className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold mb-2`}>
-                        <Package className="h-3.5 w-3.5" />
-                        <span>תכולת המשלוח</span>
-                      </div>
-                      <div className={`font-mono text-xs ${t.value} whitespace-pre-wrap leading-relaxed`}>
-                        {order.items}
-                      </div>
+                      <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>נהג משובץ</label>
+                      <Select
+                        value={order.driverId || "unassigned"}
+                        onValueChange={(val) => handleUpdateOrder(order.id, "driverId", val)}
+                      >
+                        <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">לא משויך</SelectItem>
+                          <SelectItem value="hikmat">חכמת (מנוף)</SelectItem>
+                          <SelectItem value="ali">עלי (משאית)</SelectItem>
+                          <SelectItem value="yoav">יואב (פיזור מהיר)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {order.notes && (
-                      <div className="text-xs text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 p-2 rounded">
-                        ℹ️ {order.notes}
-                      </div>
-                    )}
-                  </CardContent>
-                </div>
+                    <div>
+                      <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>עדכון סטטוס</label>
+                      <Select
+                        value={order.status}
+                        onValueChange={(val) => handleUpdateOrder(order.id, "status", val)}
+                      >
+                        <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">ממתין</SelectItem>
+                          <SelectItem value="preparing">בהכנה</SelectItem>
+                          <SelectItem value="ready">מוכן להעמסה</SelectItem>
+                          <SelectItem value="on_the_way">בדרך לשטח</SelectItem>
+                          <SelectItem value="delivered">נמסר</SelectItem>
+                          <SelectItem value="cancelled">בוטל</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className={`p-4 border-t ${t.innerBorder} ${t.controlBg} grid grid-cols-2 gap-3`}>
-                  <div>
-                    <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>נהג משובץ</label>
-                    <Select
-                      value={order.driverId || "unassigned"}
-                      onValueChange={(val) => handleUpdateOrder(order.id, "driverId", val)}
-                    >
-                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">לא משויך</SelectItem>
-                        <SelectItem value="hikmat">חכמת (מנוף)</SelectItem>
-                        <SelectItem value="ali">עלי (משאית)</SelectItem>
-                        <SelectItem value="yoav">יואב (פיזור מהיר)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className={`col-span-2 flex items-center justify-between mt-1 ${t.innerBg} p-2 rounded border ${t.innerBorder}`}>
+                      <label htmlFor={`eta-${order.id}`} className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold`}>
+                        <Clock className={`h-3.5 w-3.5 ${t.muted}`} />
+                        <span>שעת אספקה מתוכננת:</span>
+                      </label>
+                      <input
+                        id={`eta-${order.id}`}
+                        type="time"
+                        className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${t.inputText} focus:outline-none focus:border-slate-500`}
+                        value={order.eta || ""}
+                        onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
+                      />
+                    </div>
                   </div>
-
-                  <div>
-                    <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>עדכון סטטוס</label>
-                    <Select
-                      value={order.status}
-                      onValueChange={(val) => handleUpdateOrder(order.id, "status", val)}
-                    >
-                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">ממתין</SelectItem>
-                        <SelectItem value="preparing">בהכנה</SelectItem>
-                        <SelectItem value="ready">מוכן להעמסה</SelectItem>
-                        <SelectItem value="on_the_way">בדרך לשטח</SelectItem>
-                        <SelectItem value="delivered">נמסר</SelectItem>
-                        <SelectItem value="cancelled">בוטל</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className={`col-span-2 flex items-center justify-between mt-1 ${t.innerBg} p-2 rounded border ${t.innerBorder}`}>
-                    <label htmlFor={`eta-${order.id}`} className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold`}>
-                      <Clock className={`h-3.5 w-3.5 ${t.muted}`} />
-                      <span>שעת אספקה מתוכננת:</span>
-                    </label>
-                    <input
-                      id={`eta-${order.id}`}
-                      type="time"
-                      className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${t.inputText} focus:outline-none focus:border-slate-500`}
-                      value={order.eta || ""}
-                      onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
-                    />
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
+                </Card>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </motion.div>
     </div>
