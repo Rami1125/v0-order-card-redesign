@@ -130,7 +130,7 @@ export default function OrdersBoard() {
       return;
     }
 
-    const header = "☀️ *דוח סידור עבודה - ח.סבן לוגיסטיקה* ☀️\n---------------------------------------";
+    const header = "☀️ *דוח בוקר-סידור * ☀️\n---------------------------------------";
 
     const blocks = reportOrders.map((order) => {
       const driver = order.driverId && order.driverId !== "unassigned" ? order.driverId : "לא משויך";
