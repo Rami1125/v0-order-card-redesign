@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
 // ממשק הזמנה תואם ב-100% לצינור המידע מה-Apps Script
 interface Order {
   id: string;
@@ -274,4 +273,167 @@ export default function OrdersBoard() {
 
       {/* כרטיסי KPI / מדדים עליונים */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <Card className={`${t
+        <Card className={`${t.cardBg} ${t.cardBorder}`}>
+          <CardHeader className="pb-2"><CardTitle className={`text-xs ${t.subtle}`}>כל ההזמנות</CardTitle></CardHeader>
+          <CardContent><p className={`text-2xl font-black ${t.heading}`}>{stats.total}</p></CardContent>
+        </Card>
+        <Card className={`${t.cardBg} ${t.cardBorder}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-amber-500">בהכנה / ממתין</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-black text-amber-500">{stats.preparing}</p></CardContent>
+        </Card>
+        <Card className={`${t.cardBg} ${t.cardBorder}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-emerald-500">מוכן להעמסה</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-black text-emerald-500">{stats.ready}</p></CardContent>
+        </Card>
+        <Card className={`${t.cardBg} ${t.cardBorder}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-blue-500">נמסר ללקוח</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-black text-blue-500">{stats.delivered}</p></CardContent>
+        </Card>
+        <Card className={`${t.cardBg} ${t.cardBorder}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-rose-500">חסר נהג משובץ</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-black text-rose-500">{stats.noDriver}</p></CardContent>
+        </Card>
+      </div>
+
+      {/* סרגל סינון וחיפוש דינמי */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className={`absolute right-3 top-3 h-4 w-4 ${t.muted}`} />
+          <input
+            type="text"
+            placeholder="חפש לפי שם לקוח, מספר הזמנה או כתובת אספקה..."
+            className={`w-full ${t.inputBg} border ${t.inputBorder} rounded-lg pr-10 pl-4 py-2 ${t.inputText} focus:outline-none focus:border-slate-500`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className={`w-full md:w-[200px] ${t.inputBg} ${t.inputBorder} ${t.inputText}`}>
+            <SelectValue placeholder="סנן לפי סטטוס" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">כל הסטטוסים</SelectItem>
+            <SelectItem value="pending">{STATUS_LABELS.pending}</SelectItem>
+            <SelectItem value="preparing">{STATUS_LABELS.preparing}</SelectItem>
+            <SelectItem value="ready">{STATUS_LABELS.ready}</SelectItem>
+            <SelectItem value="on_the_way">{STATUS_LABELS.on_the_way}</SelectItem>
+            <SelectItem value="delivered">{STATUS_LABELS.delivered}</SelectItem>
+            <SelectItem value="cancelled">{STATUS_LABELS.cancelled}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* רשת כרטיסי ההזמנות החיה עם אנימציית פריסה חלקה ומאובטחת */}
+      <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AnimatePresence mode="popLayout">
+          {filteredOrders.map((order) => (
+            <motion.div
+              key={order.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={spring}
+            >
+              <Card className={`${t.cardBg} ${t.cardBorder} ${t.cardHover} flex flex-col justify-between transition-colors h-full`}>
+                <div>
+                  <CardHeader className={`border-b ${t.innerBorder} pb-3 flex flex-row justify-between items-start space-y-0`}>
+                    <div>
+                      <span className={`text-xs ${t.muted} block font-mono font-bold`}>#{order.orderNumber}</span>
+                      <CardTitle className={`text-lg font-black ${t.heading} mt-1`}>{order.customerName}</CardTitle>
+                    </div>
+                    <Badge variant="outline" className={`font-bold px-2.5 py-1 ${STATUS_BADGE_CLASSES[order.status]}`}>
+                      {STATUS_LABELS[order.status]}
+                    </Badge>
+                  </CardHeader>
+
+                  <CardContent className="pt-4 space-y-4 text-sm">
+                    {/* כתובת יעד */}
+                    <div className={`flex items-start gap-2 ${t.value}`}>
+                      <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
+                      <span className="font-medium">{order.destination}</span>
+                    </div>
+
+                    {/* תכולת המשלוח */}
+                    <div className={`${t.innerBg} p-3 rounded-lg border ${t.innerBorder}`}>
+                      <div className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold mb-2`}>
+                        <Package className="h-3.5 w-3.5" />
+                        <span>תכולת המשלוח</span>
+                      </div>
+                      <div className={`font-mono text-xs ${t.value} whitespace-pre-wrap leading-relaxed`}>
+                        {order.items}
+                      </div>
+                    </div>
+
+                    {/* הערות ומחסן יוצא */}
+                    {order.notes && (
+                      <div className="text-xs text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 p-2 rounded">
+                        ℹ️ {order.notes}
+                      </div>
+                    )}
+                  </CardContent>
+                </div>
+
+                {/* בקרי שליטה ושינוי בשטח */}
+                <div className={`p-4 border-t ${t.innerBorder} ${t.controlBg} grid grid-cols-2 gap-3`}>
+                  <div>
+                    <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>נהג משובץ</label>
+                    <Select
+                      value={order.driverId || "unassigned"}
+                      onValueChange={(val) => handleUpdateOrder(order.id, "driverId", val)}
+                    >
+                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">לא משויך</SelectItem>
+                        <SelectItem value="hikmat">חכמת (מנוף)</SelectItem>
+                        <SelectItem value="ali">עלי (משאית)</SelectItem>
+                        <SelectItem value="yoav">יואב (פיזור מהיר)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] uppercase tracking-wider ${t.label} font-bold block mb-1`}>עדכון סטטוס</label>
+                    <Select
+                      value={order.status}
+                      onValueChange={(val) => handleUpdateOrder(order.id, "status", val)}
+                    >
+                      <SelectTrigger className={`h-8 ${t.controlInputBg} ${t.inputBorder} text-xs font-medium ${t.inputText}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">ממתין</SelectItem>
+                        <SelectItem value="preparing">בהכנה</SelectItem>
+                        <SelectItem value="ready">מוכן להעמסה</SelectItem>
+                        <SelectItem value="on_the_way">בדרך לשטח</SelectItem>
+                        <SelectItem value="delivered">נמסר</SelectItem>
+                        <SelectItem value="cancelled">בוטל</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* בורר שעה מובנה */}
+                  <div className={`col-span-2 flex items-center justify-between mt-1 ${t.innerBg} p-2 rounded border ${t.innerBorder}`}>
+                    <label htmlFor={`eta-${order.id}`} className={`flex items-center gap-1.5 text-xs ${t.subtle} font-bold`}>
+                      <Clock className={`h-3.5 w-3.5 ${t.muted}`} />
+                      <span>שעת אספקה מתוכננת:</span>
+                    </label>
+                    <input
+                      id={`eta-${order.id}`}
+                      type="time"
+                      className={`h-7 ${t.inputBg} border ${t.inputBorder} rounded px-2 text-xs font-mono text-center ${t.inputText} focus:outline-none focus:border-slate-500`}
+                      value={order.eta || ""}
+                      onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+}
