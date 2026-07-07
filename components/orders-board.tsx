@@ -130,6 +130,18 @@ export default function OrdersBoard() {
       return;
     }
 
+// הפקת "דוח בוקר" לוואטסאפ של כל הזמנות פתוחות שטרם נמסרו כולל תצוגת מחסן
+  const handleMorningReport = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const reportOrders = orders.filter((order) => order.status !== "delivered");
+
+    if (reportOrders.length === 0) {
+      toast.info("לא נמצאו הזמנות פתוחות שטרם נמסרו.");
+      return;
+    }
+
     const header = "☀️ *דוח סידור עבודה - ח.סבן לוגיסטיקה* ☀️\n---------------------------------------";
 
     const blocks = reportOrders.map((order) => {
@@ -144,8 +156,9 @@ export default function OrdersBoard() {
         `📅 *תאריך:* ${order.date}\n` +
         `🏭 *מחסן יוצא:* ${warehouse}\n` + // השורה החדשה שהוספנו לבקשתך!
         `📍 *יעד:* ${order.destination}\n` +
-        `🚚 *|*נהג:* ${driver}\n` +
+        `🚚 *סטטוס:* ${STATUS_LABELS[order.status]} | *נהג:* ${driver}\n` +
         `⏰ *שעת אספקה:* ${eta}\n` +
+        `📝 *תכולה:* ${order.items}\n` +
         `---------------------------------------`
       );
     });
@@ -156,7 +169,6 @@ export default function OrdersBoard() {
     window.open(`https://wa.me/?text=${encodedText}`, "_blank");
     toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
   };
-    });
 
 
   // חישוב מוני ה-KPI לכרטיסי המדדים העליונים
