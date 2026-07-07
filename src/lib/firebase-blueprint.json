@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "An order representing customer shipment details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "warehouse": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "items": { "type": "array" },
+        "notes": { "type": "string" },
+        "status": { "type": "string" },
+        "aiModel": { "type": "string" },
+        "predictedDelay": { "type": "number" },
+        "delayReason": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "orderNumber", "customerName", "warehouse", "deliveryAddress", "items", "status"]
+    },
+    "AuditLogEntry": {
+      "title": "AuditLogEntry",
+      "description": "An entry for tracing status updates made to an order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "orderId": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "oldStatus": { "type": "string" },
+        "newStatus": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "orderId", "orderNumber", "oldStatus", "newStatus", "updatedBy"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "User-facing and synchronized customer orders"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLogEntry",
+      "description": "Audit history of status updates per order"
+    }
+  }
+}
