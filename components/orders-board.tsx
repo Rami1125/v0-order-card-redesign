@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
-import { db } from "../lib/firebase"; 
-import { motion, AnimatePresence } from "framer-motion"; // שימוש בייבוא הסטנדרטי והיציב
+import { db } from "../lib/firebase"; // נתיב חסין ומעודכן לפרויקט החדש
+import { motion, AnimatePresence } from "motion/react";
 import {
   Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle,
 } from "lucide-react";
