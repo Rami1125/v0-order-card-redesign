@@ -139,9 +139,8 @@ export default function OrdersBoard() {
         `📦 *הזמנה #${order.orderNumber}* | ${order.customerName}\n` +
         `📅 *תאריך:* ${order.date}\n` +
         `📍 *יעד:* ${order.destination}\n` +
-        `🚚 *סטטוס:* ${STATUS_LABELS[order.status]} | *נהג:* ${driver}\n` +
+        `🚚|*נהג:* ${driver}\n` +
         `⏰ *שעת אספקה:* ${eta}\n` +
-        `📝 *תכולה:* ${order.items}\n` +
         `---------------------------------------`
       );
     });
@@ -389,7 +388,7 @@ export default function OrdersBoard() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned">לא משויך</SelectItem>
-                        <SelectItem value="hikmat">חכמת (מנוף)</SelectItem>
+                        <SelectItem value="חכמת">חכמת (מנוף)</SelectItem>
                         <SelectItem value="ali">עלי (משאית)</SelectItem>
                         <SelectItem value="yoav">יואב (פיזור מהיר)</SelectItem>
                       </SelectContent>
