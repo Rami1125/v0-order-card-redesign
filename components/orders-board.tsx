@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore';
-import { db } from '../src/lib/firebase';
+import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Package, Clock, Truck, CheckCircle2, AlertTriangle, 
