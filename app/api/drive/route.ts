@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { db } from '@/lib/firebase'; // תשתמש ב-db הרגיל שיש לך ב-lib/firebase
+import { collection, doc, setDoc } from 'firebase/firestore';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const fileId = searchParams.get('fileId');
-
-  if (!fileId) return NextResponse.json({ error: 'Missing fileId' }, { status: 400 });
-
+export async function POST() {
   try {
-    console.log(fileId)
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -18,18 +14,19 @@ export async function GET(request: Request) {
     });
 
     const drive = google.drive({ version: 'v3', auth });
-
-    const response = await drive.files.get(
-      { fileId: fileId, alt: 'media' },
-      { responseType: 'arraybuffer' }
-    );
-
-    return new NextResponse(response.data as ArrayBuffer, {
-      headers: {
-        'Content-Type': 'application/pdf',
-      },
+    const res = await drive.files.list({
+      q: `'1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP' in parents and mimeType = 'application/pdf'`,
+      fields: 'files(id, name)',
     });
+
+    const files = res.data.files || [];
+    for (const file of files) {
+      if (file.id && file.name) {
+        await setDoc(doc(collection(db, "invoices"), file.id), { name: file.name, driveId: file.id });
+      }
+    }
+    return NextResponse.json({ success: true, count: files.length });
   } catch (error) {
-    return NextResponse.json({ error: 'Drive connection failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Sync failed' }, { status: 500 });
   }
 }
