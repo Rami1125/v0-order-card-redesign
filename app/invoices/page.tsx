@@ -22,6 +22,28 @@ export default function InvoicesPage() {
   const fetchInvoices = async () => {
     setLoading(true);
     try {
+      // ניסיון למשוך את הקבצים מה-API החדש שלנו
+      const response = await fetch('/api/sync-drive', { method: 'POST' });
+      const result = await response.json();
+      
+      console.log("SYNC RESULT:", result); // תראה ב-Console של הדפדפן אם הגיעו קבצים
+
+      // אחרי הסנכרון, נמשוך מה-Firestore
+      const querySnapshot = await getDocs(collection(db, "invoices"));
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      setInvoices(data);
+      if (data.length === 0) {
+        toast.warning("הקולקציה ריקה - וודא שה-API של הדרייב מחזיר קבצים");
+      }
+    } catch (error) {
+      toast.error("שגיאת סנכרון מול הדרייב");
+    } finally {
+      setLoading(false);
+    }
+  };
+    setLoading(true);
+    try {
       const querySnapshot = await getDocs(collection(db, "invoices"));
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setInvoices(data);
