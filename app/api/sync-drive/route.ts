@@ -1,6 +1,6 @@
-import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase'; // חיבור לפיירבייס שלנו
+import { google } from 'googleapis';
+import { db } from '@/lib/firebase-admin'; // וודא שיש לך חיבור admin
 import { collection, doc, setDoc } from 'firebase/firestore';
 
 export async function POST() {
@@ -14,21 +14,23 @@ export async function POST() {
 
   const drive = google.drive({ version: 'v3', auth });
 
-  // משיכת כל ה-PDF מהתיקייה הספציפית שנתת (1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP)
+  // סריקת התיקייה שלך
   const res = await drive.files.list({
     q: `'1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP' in parents and mimeType = 'application/pdf'`,
     fields: 'files(id, name)',
   });
 
-  // דחיפת התוצאות ל-Firestore כדי שנוכל להציג אותם מהר ב-Frontend
   const files = res.data.files || [];
+  
+  // דחיפה ל-Firebase
   for (const file of files) {
-    await setDoc(doc(collection(db, "invoices"), file.id), {
-      name: file.name,
-      driveId: file.id,
-      updatedAt: new Date().toISOString()
-    });
+    if (file.id && file.name) {
+      await setDoc(doc(collection(db, "invoices"), file.id), {
+        name: file.name,
+        driveId: file.id,
+      });
+    }
   }
 
-  return NextResponse.json({ message: `סונכרנו ${files.length} קבצים בהצלחה!` });
+  return NextResponse.json({ count: files.length });
 }
