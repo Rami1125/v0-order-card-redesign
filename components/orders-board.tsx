@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, query, orderBy, limit } from "f
 import { db } from "../lib/firebase"; 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard, AlertCircle
+  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard, AlertCircle, Truck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,15 +65,16 @@ export default function OrdersBoard() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [viewMode, setViewMode] = useState<"live" | "history">("live");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const isInitialLoad = useRef(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-200.wav");
+    // טוען את קובץ ה-MP3 מתיקיית public
+    audioRef.current = new Audio("/notification.mp3");
   }, []);
 
-  // שעון רדאר שמתעדכן כל דקה
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -100,9 +101,15 @@ export default function OrdersBoard() {
           fetchedOrders.push({ id: docSnap.id, ...docSnap.data() } as Order);
         });
 
-        if (!isInitialLoad.current && hasNewDoc && isSoundEnabled && audioRef.current) {
-          audioRef.current.play().catch((err) => console.log("Sound play blocked:", err));
+        if (!isInitialLoad.current && hasNewDoc) {
+          if (isSoundEnabled && audioRef.current) {
+            audioRef.current.play().catch((err) => console.log("Sound play blocked:", err));
+          }
           toast.success("הזמנה חדשה נכנסה למערכת!");
+          
+          // הפעלת אפקט חגיגה ויזואלי
+          setShowCelebration(true);
+          setTimeout(() => setShowCelebration(false), 1500);
         }
 
         setOrders(fetchedOrders);
@@ -116,6 +123,25 @@ export default function OrdersBoard() {
 
     return () => unsubscribe();
   }, [isSoundEnabled]);
+
+  const handleToggleSound = async () => {
+    const newState = !isSoundEnabled;
+    setIsSoundEnabled(newState);
+
+    // פתיחת נעילת אודיו מול הדפדפן (AudioContext Unlock)
+    if (newState && audioRef.current) {
+      try {
+        audioRef.current.volume = 0; // השמעה שקטה
+        await audioRef.current.play();
+        audioRef.current.pause();
+        audioRef.current.volume = 1; // החזרה לווליום מלא
+        audioRef.current.currentTime = 0;
+        toast.success("התראות קוליות אושרו על ידי הדפדפן");
+      } catch (e) {
+        console.log("Audio unlock failed", e);
+      }
+    }
+  };
 
   const handleUpdateOrder = async (orderId: string, field: keyof Order, value: string) => {
     try {
@@ -170,7 +196,6 @@ export default function OrdersBoard() {
     toast.success(`הופק דוח עבור ${reportOrders.length} הזמנות פתוחות`);
   };
 
-  // פונקציית רדאר האיחורים האקטיבי
   const getEtaStatus = (order: Order) => {
     if (!order.eta || order.status === "delivered" || order.status === "cancelled") return "normal";
 
@@ -187,6 +212,15 @@ export default function OrdersBoard() {
     if (diff < 0) return "overdue";
     if (diff <= 15) return "warning";
     return "normal";
+  };
+
+  // חישוב מאזן עומס הנהגים (הזמנות פעילות בלבד)
+  const activeOrders = orders.filter(o => o.status !== "delivered" && o.status !== "cancelled");
+  const driverWorkload = {
+    hikmat: activeOrders.filter(o => o.driverId === "hikmat").length,
+    ali: activeOrders.filter(o => o.driverId === "ali").length,
+    yoav: activeOrders.filter(o => o.driverId === "yoav").length,
+    unassigned: activeOrders.filter(o => !o.driverId || o.driverId === "unassigned").length,
   };
 
   const stats = {
@@ -274,7 +308,26 @@ export default function OrdersBoard() {
   };
 
   return (
-    <div className={`p-6 min-h-screen transition-colors duration-500 ${t.page}`} dir="rtl">
+    <div className={`p-6 min-h-screen transition-colors duration-500 relative ${t.page}`} dir="rtl">
+      
+      {/* פופ-אפ חגיגה ויזואלי להזמנה חדשה */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center backdrop-blur-[2px]"
+          >
+            <div className="bg-emerald-500/90 text-white px-10 py-8 rounded-3xl shadow-[0_0_50px_rgba(16,185,129,0.5)] flex flex-col items-center gap-4">
+              <span className="text-7xl animate-bounce">📦🎉</span>
+              <h2 className="text-3xl font-black tracking-tight">הזמנה חדשה נחתה!</h2>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="relative z-50 flex flex-col lg:flex-row justify-between lg:items-center gap-4 mb-8 border-b border-slate-800/60 pb-4">
         <div>
           <h1 className={`text-3xl font-black tracking-tight ${t.heading}`}>
@@ -313,7 +366,7 @@ export default function OrdersBoard() {
           </Button>
           <Button
             variant={isSoundEnabled ? "default" : "destructive"}
-            onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+            onClick={handleToggleSound}
             className="flex items-center gap-2 font-bold cursor-pointer"
           >
             {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
@@ -322,7 +375,7 @@ export default function OrdersBoard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <Card onClick={() => setFilterStatus("all")} className={getKpiCardStyle("all", "ring-slate-400")}>
           <CardHeader className="pb-2"><CardTitle className={`text-xs ${t.subtle}`}>כל ההזמנות</CardTitle></CardHeader>
           <CardContent><p className={`text-2xl font-black ${t.heading}`}>{stats.total}</p></CardContent>
@@ -343,6 +396,30 @@ export default function OrdersBoard() {
           <CardHeader className="pb-2"><CardTitle className="text-xs text-rose-500">חסר נהג משובץ</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-black text-rose-500">{stats.noDriver}</p></CardContent>
         </Card>
+      </div>
+
+      {/* מאזן עומס נהגים בשטח */}
+      <div className={`mb-6 p-4 rounded-xl border ${t.cardBg} ${t.cardBorder} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-sm`}>
+        <div className={`text-sm font-bold ${t.heading} flex items-center gap-2`}>
+          <Truck className="h-5 w-5 text-emerald-500" />
+          מאזן עומס נהגים (משלוחים פעילים בדרך):
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Badge variant="outline" className={`px-3 py-1.5 font-bold ${t.cardBorder} ${t.heading}`}>
+            חכמת: <span className="text-blue-500 ml-1 text-base">{driverWorkload.hikmat}</span>
+          </Badge>
+          <Badge variant="outline" className={`px-3 py-1.5 font-bold ${t.cardBorder} ${t.heading}`}>
+            עלי: <span className="text-emerald-500 ml-1 text-base">{driverWorkload.ali}</span>
+          </Badge>
+          <Badge variant="outline" className={`px-3 py-1.5 font-bold ${t.cardBorder} ${t.heading}`}>
+            יואב: <span className="text-amber-500 ml-1 text-base">{driverWorkload.yoav}</span>
+          </Badge>
+          {driverWorkload.unassigned > 0 && (
+            <Badge variant="outline" className={`px-3 py-1.5 font-bold bg-rose-500/10 text-rose-500 border-rose-500/30`}>
+              ממתינים לשיבוץ: <span className="ml-1 text-base">{driverWorkload.unassigned}</span>
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -393,7 +470,6 @@ export default function OrdersBoard() {
               >
                 <Card className={`relative overflow-hidden ${t.cardBg} ${t.cardBorder} ${t.cardHover} flex flex-col justify-between transition-colors h-full`}>
                   
-                  {/* רדאר איחורים: אפקט הבהוב בכרטיס */}
                   {etaStatus === "overdue" && (
                     <div className="absolute inset-0 rounded-xl border-2 border-rose-500 animate-pulse pointer-events-none z-10" />
                   )}
