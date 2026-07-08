@@ -1,22 +1,28 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from "@/components/ui/button";
 import { Save, Eraser, AlertCircle } from "lucide-react";
- 
+
 // CSS חובה לתצוגה תקינה של ה-PDF
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// הגדרת Worker מדויקת ל-Next.js למניעת קריסות טעינה
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// תיקון קריטי: שימוש ב-.js במקום .mjs, ווידוא שהגרסה תואמת בדיוק
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 export default function InvoiceEditor() {
   const [lines, setLines] = useState<any[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [pdfError, setPdfError] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // הגנת ברזל: מוודא שהקומפוננטה תרוץ רק אחרי שהדפדפן סיים לטעון
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleMouseDown = (e: any) => {
     setIsDrawing(true);
@@ -38,10 +44,13 @@ export default function InvoiceEditor() {
     setIsDrawing(false);
   };
 
+  // מונע רינדור שרת שגורם לקריסת "This page couldn't load"
+  if (!isMounted) return null;
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl relative flex flex-col items-center">
       
-      {/* סרגל כלים - מוכן למובייל */}
+      {/* סרגל כלים */}
       <div className="w-full flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800 mb-4">
         <div className="flex gap-3">
           <Button onClick={() => setLines([])} variant="outline" className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold">
@@ -53,26 +62,34 @@ export default function InvoiceEditor() {
         </Button>
       </div>
 
-      {/* אזור העבודה - הקנבס וה-PDF */}
+      {/* אזור העבודה */}
       <div className="relative border border-slate-700 shadow-xl overflow-hidden bg-white rounded-lg" style={{ width: 800, height: 1000 }}>
         
         {/* שכבת ה-PDF */}
         {!pdfError ? (
           <Document 
-            file="/invoice-sample.pdf" // שנה לנתיב הקובץ מהפיירבייס בעתיד
-            onLoadError={() => setPdfError(true)}
+            file="/invoice-sample.pdf"
+            onLoadError={(error) => {
+              console.error("PDF Load Error:", error);
+              setPdfError(true);
+            }}
+            loading={
+              <div className="flex items-center justify-center h-full w-full text-slate-400">
+                טוען תעודה...
+              </div>
+            }
           >
-            <Page pageNumber={1} width={800} />
+            <Page pageNumber={1} width={800} renderTextLayer={false} renderAnnotationLayer={false} />
           </Document>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-100 z-0">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-100 z-0 border-2 border-dashed border-slate-300 m-4 rounded-lg">
             <AlertCircle className="w-16 h-16 mb-4 text-slate-400" />
-            <h2 className="text-xl font-bold">לא נמצא קובץ PDF לתצוגה</h2>
-            <p>הקנבס פתוח לציור, אך התעודה חסרה.</p>
+            <h2 className="text-xl font-bold text-slate-700">לא נמצא קובץ PDF לתצוגה</h2>
+            <p className="text-slate-500">וודא שקיים קובץ בשם invoice-sample.pdf בתיקיית public</p>
           </div>
         )}
 
-        {/* שכבת הציור - מעל ה-PDF, תומך טאצ' */}
+        {/* שכבת הציור */}
         <Stage
           width={800}
           height={1000}
