@@ -8,6 +8,7 @@ export async function GET(request: Request) {
   if (!fileId) return NextResponse.json({ error: 'Missing fileId' }, { status: 400 });
 
   try {
+    console.log(fileId)
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
