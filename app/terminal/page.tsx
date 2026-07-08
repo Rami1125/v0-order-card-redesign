@@ -1,9 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
-export default function TerminalPage() {
+function TerminalContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [userData, setUserData] = useState<any>(null);
