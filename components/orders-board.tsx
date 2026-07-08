@@ -6,12 +6,14 @@ import { collection, onSnapshot, doc, updateDoc, query, orderBy, limit } from "f
 import { db } from "../lib/firebase"; 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard, AlertCircle, Truck, Settings, Lock, X
+  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, 
+  Archive, LayoutDashboard, AlertCircle, Truck, Settings, Lock, X, FileText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 
 export interface Order {
@@ -316,7 +318,8 @@ export default function OrdersBoard() {
         pipelineEmpty: "bg-white",
         pipelineBorder: "border-slate-300",
       };
-
+export default function OrdersBoard() {
+  const router = useRouter();
   const getKpiCardStyle = (targetStatus: string, ringColor: string) => {
     const isActive = filterStatus === targetStatus;
     return `cursor-pointer transition-all duration-200 select-none active:scale-95 ${
@@ -573,17 +576,6 @@ export default function OrdersBoard() {
                         <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
                         <span className="font-medium">{order.destination}</span>
                       </div>
-                      return (
-    <SidebarProvider>
-      <div className={`flex min-h-screen w-full ${t.page}`} dir="rtl">
-        <Sidebar className="border-r border-slate-800">
-          <SidebarContent className="bg-slate-900 pt-4">
-            <SidebarMenu>
-              <SidebarMenuItem><SidebarMenuButton onClick={() => router.push('/management')}><LayoutDashboard className="size-4" /> לוח סידור</SidebarMenuButton></SidebarMenuItem>
-              <SidebarMenuItem><SidebarMenuButton onClick={() => router.push('/invoices')}><FileText className="size-4" /> תעודות משלוח</SidebarMenuButton></SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
 
                       <div className="py-2 mb-2 select-none">
                         {isCancelled ? (
@@ -702,15 +694,60 @@ export default function OrdersBoard() {
                         } focus:outline-none focus:border-slate-500`}
                         value={order.eta || ""}
                         onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
-                        <motion.div layout className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {filteredOrders.map(order => (
-                <motion.div key={order.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <Card className={`${t.cardBg} p-4`}>
-                        <CardTitle>{order.customerName}</CardTitle>
-                        <p>{order.destination}</p>
                       />
-                    </Card>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+}
+return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-slate-950" dir="rtl">
+        <Sidebar className="border-r border-slate-800">
+          <SidebarContent className="bg-slate-900 pt-4">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => router.push('/management')}>
+                  <LayoutDashboard className="size-4" /> לוח סידור
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => router.push('/invoices')}>
+                  <FileText className="size-4" /> תעודות משלוח
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+
+        <main className="flex-1 p-6 transition-colors duration-500">
+          <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <h1 className="text-3xl font-black text-white">לוח הזמנות</h1>
+            <div className="flex gap-2">
+              <Button onClick={() => router.push('/invoices')} className="bg-blue-600 hover:bg-blue-700 font-bold">
+                <FileText className="size-4 ml-2" /> תעודות משלוח
+              </Button>
+            </div>
+          </div>
+          
+          <motion.div layout className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredOrders.map((order) => (
+                <motion.div key={order.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <Card className={`${t.cardBg} ${t.cardBorder} p-4 h-full`}>
+                    <CardHeader className="p-0 pb-4">
+                      <CardTitle className={t.heading}>{order.customerName}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <p className={t.subtle}>{order.destination}</p>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
             </AnimatePresence>
