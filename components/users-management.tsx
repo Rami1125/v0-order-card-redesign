@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-// שנה את השורה הראשונה בקובץ הזה ל:
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
