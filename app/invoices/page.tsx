@@ -1,62 +1,72 @@
 "use client";
 import React, { useState, useRef } from 'react';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Stage, Layer, Line } from 'react-konva';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { FileText, LayoutDashboard, Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-// הגדרת ה-Worker עבור ה-PDF
+// Worker ל-PDF
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 export default function InvoicesPage() {
   const [lines, setLines] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const stageRef = useRef(null);
-
-  const handleMouseDown = (e) => {
-    setIsDrawing(true);
-    setLines([...lines, { points: [e.evt.layerX, e.evt.layerY] }]);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDrawing) return;
-    const lastLine = lines[lines.length - 1];
-    lastLine.points = lastLine.points.concat([e.evt.layerX, e.evt.layerY]);
-    lines.splice(lines.length - 1, 1, lastLine);
-    setLines([...lines]);
-  };
+  const router = useRouter();
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-white">
-      <h1 className="text-2xl font-bold mb-6">תעודות משלוח - קנבס עריכה</h1>
-      
-      <div className="relative border border-gray-700 rounded-lg overflow-hidden">
-        {/* שכבת ה-PDF */}
-        <Document file="/path-to-your-invoice.pdf">
-          <Page pageNumber={1} />
-        </Document>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-gray-950 text-white">
+        {/* ה-Sidebar המעוצב שלך */}
+        <Sidebar className="bg-gray-900 border-r border-gray-800">
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => router.push('/management')}>
+                    <LayoutDashboard className="size-4" /> <span>לוח סידור</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive>
+                    <FileText className="size-4" /> <span>תעודות משלוח</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
 
-        {/* שכבת הציור (הקנבס) */}
-        <Stage
-          width={800}
-          height={1000}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={() => setIsDrawing(false)}
-          className="absolute top-0 left-0"
-        >
-          <Layer>
-            {lines.map((line, i) => (
-              <Line key={i} points={line.points} stroke="#ef4444" strokeWidth={3} />
-            ))}
-          </Layer>
-        </Stage>
+        {/* תוכן הדף */}
+        <main className="flex-1 p-8">
+          <h1 className="text-2xl font-bold mb-6">עריכת תעודה - SabanOS</h1>
+          
+          <div className="relative border border-gray-800 rounded-xl overflow-hidden bg-white shadow-2xl">
+            <Document file="/invoice-sample.pdf">
+              <Page pageNumber={1} width={800} />
+            </Document>
+
+            <Stage
+              width={800}
+              height={1000}
+              onMouseDown={() => setIsDrawing(true)}
+              onMouseMove={(e) => {
+                if (!isDrawing) return;
+                const pos = e.target.getStage().getPointerPosition();
+                setLines([...lines, { points: [pos.x, pos.y] }]);
+              }}
+              onMouseUp={() => setIsDrawing(false)}
+              className="absolute top-0 left-0 cursor-crosshair"
+            >
+              <Layer>
+                {lines.map((line, i) => (
+                  <Line key={i} points={line.points} stroke="#ef4444" strokeWidth={3} tension={0.5} />
+                ))}
+              </Layer>
+            </Stage>
+          </div>
+        </main>
       </div>
-      
-      <button 
-        className="mt-4 bg-blue-600 px-6 py-2 rounded-md hover:bg-blue-700 transition"
-        onClick={() => console.log("שומר לקנבס Firebase...")}
-      >
-        שמור הערות חתומות
-      </button>
-    </div>
+    </SidebarProvider>
   );
 }
