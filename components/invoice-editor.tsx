@@ -5,7 +5,7 @@ import { Stage, Layer, Line } from 'react-konva';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from "@/components/ui/button";
 import { Save, Eraser, AlertCircle } from "lucide-react";
-
+ 
 // CSS חובה לתצוגה תקינה של ה-PDF
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
