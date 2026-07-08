@@ -573,6 +573,17 @@ export default function OrdersBoard() {
                         <MapPin className={`h-4 w-4 mt-0.5 ${t.muted} flex-shrink-0`} />
                         <span className="font-medium">{order.destination}</span>
                       </div>
+                      return (
+    <SidebarProvider>
+      <div className={`flex min-h-screen w-full ${t.page}`} dir="rtl">
+        <Sidebar className="border-r border-slate-800">
+          <SidebarContent className="bg-slate-900 pt-4">
+            <SidebarMenu>
+              <SidebarMenuItem><SidebarMenuButton onClick={() => router.push('/management')}><LayoutDashboard className="size-4" /> לוח סידור</SidebarMenuButton></SidebarMenuItem>
+              <SidebarMenuItem><SidebarMenuButton onClick={() => router.push('/invoices')}><FileText className="size-4" /> תעודות משלוח</SidebarMenuButton></SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
 
                       <div className="py-2 mb-2 select-none">
                         {isCancelled ? (
@@ -691,15 +702,21 @@ export default function OrdersBoard() {
                         } focus:outline-none focus:border-slate-500`}
                         value={order.eta || ""}
                         onChange={(e) => handleUpdateOrder(order.id, "eta", e.target.value)}
+                        <motion.div layout className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredOrders.map(order => (
+                <motion.div key={order.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Card className={`${t.cardBg} p-4`}>
+                        <CardTitle>{order.customerName}</CardTitle>
+                        <p>{order.destination}</p>
                       />
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+                    </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
