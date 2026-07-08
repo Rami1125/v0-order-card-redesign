@@ -3,16 +3,16 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
+// קומפוננטה פנימית שמטפלת בלוגיקה
 function TerminalContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<{ id: string; role: string } | null>(null);
 
   useEffect(() => {
     if (token) {
       try {
-        // מפענח את הלינק המאובטח
-        const decoded = atob(token); 
+        const decoded = atob(token);
         const [id, role] = decoded.split(":");
         setUserData({ id, role });
       } catch (e) {
@@ -21,15 +21,23 @@ function TerminalContent() {
     }
   }, [token]);
 
-  if (!userData) return <div className="p-10 text-center text-white">טוען ממשק נהג...</div>;
-
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-white" dir="rtl">
-      <h1 className="text-4xl font-black mb-8">שלום {userData.role === 'driver' ? 'נהג' : 'איש צוות'}</h1>
-      {/* כאן נציג את ההזמנות שמשויכות ל-userData.id */}
-      <div className="grid gap-4">
-        <p>ממשק טאבלט מותאם אישית יופיע כאן בקרוב...</p>
-      </div>
+    <div className="p-6 text-white">
+      <h1 className="text-2xl font-black">מסוף נהג</h1>
+      {userData ? (
+        <p className="mt-4">שלום, מזהה משתמש: {userData.id} | תפקיד: {userData.role}</p>
+      ) : (
+        <p className="mt-4">ממתין לטעינת נתונים...</p>
+      )}
     </div>
+  );
+}
+
+// ייצוא מפורש של הקומפוננטה הראשית שעוטפת את ה-Suspense
+export default function TerminalPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center text-white">טוען ממשק נהג...</div>}>
+      <TerminalContent />
+    </Suspense>
   );
 }
