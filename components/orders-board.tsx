@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy, limit } from "firebase/firestore";
 import { db } from "../lib/firebase"; 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard, AlertCircle, Truck
+  Package, Clock, MapPin, Search, Volume2, VolumeX, Sun, Moon, MessageCircle, Archive, LayoutDashboard, AlertCircle, Truck, Settings, Lock, X
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,8 @@ const PIPELINE_STAGES = [
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 export default function OrdersBoard() {
+  const router = useRouter();
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -66,12 +69,15 @@ export default function OrdersBoard() {
   const [viewMode, setViewMode] = useState<"live" | "history">("live");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showCelebration, setShowCelebration] = useState(false);
+  
+  // Admin Auth State
+  const [showAdminAuth, setShowAdminAuth] = useState(false);
+  const [adminPwd, setAdminPwd] = useState("");
 
   const isInitialLoad = useRef(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // טוען את קובץ ה-MP3 מתיקיית public
     audioRef.current = new Audio("/notification.mp3");
   }, []);
 
@@ -107,7 +113,6 @@ export default function OrdersBoard() {
           }
           toast.success("הזמנה חדשה נכנסה למערכת!");
           
-          // הפעלת אפקט חגיגה ויזואלי
           setShowCelebration(true);
           setTimeout(() => setShowCelebration(false), 1500);
         }
@@ -128,13 +133,12 @@ export default function OrdersBoard() {
     const newState = !isSoundEnabled;
     setIsSoundEnabled(newState);
 
-    // פתיחת נעילת אודיו מול הדפדפן (AudioContext Unlock)
     if (newState && audioRef.current) {
       try {
-        audioRef.current.volume = 0; // השמעה שקטה
+        audioRef.current.volume = 0;
         await audioRef.current.play();
         audioRef.current.pause();
-        audioRef.current.volume = 1; // החזרה לווליום מלא
+        audioRef.current.volume = 1;
         audioRef.current.currentTime = 0;
         toast.success("התראות קוליות אושרו על ידי הדפדפן");
       } catch (e) {
@@ -214,7 +218,20 @@ export default function OrdersBoard() {
     return "normal";
   };
 
-  // חישוב מאזן עומס הנהגים (הזמנות פעילות בלבד)
+  const handleAdminAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminPwd === "1125") {
+      setShowAdminAuth(false);
+      setAdminPwd("");
+      toast.success("גישה אושרה בהצלחה!");
+      // נתיב דף הניהול - ניתן לשנות את הכתובת במידת הצורך
+      router.push("/management"); 
+    } else {
+      toast.error("סיסמה שגויה, הגישה נדחתה");
+      setAdminPwd("");
+    }
+  };
+
   const activeOrders = orders.filter(o => o.status !== "delivered" && o.status !== "cancelled");
   const driverWorkload = {
     hikmat: activeOrders.filter(o => o.driverId === "hikmat").length,
@@ -310,7 +327,56 @@ export default function OrdersBoard() {
   return (
     <div className={`p-6 min-h-screen transition-colors duration-500 relative ${t.page}`} dir="rtl">
       
-      {/* פופ-אפ חגיגה ויזואלי להזמנה חדשה */}
+      {/* פופ-אפ הזנת סיסמת מנהל */}
+      <AnimatePresence>
+        {showAdminAuth && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative"
+            >
+              <button 
+                onClick={() => { setShowAdminAuth(false); setAdminPwd(""); }}
+                className="absolute top-4 left-4 text-slate-500 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              
+              <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                <Lock className="h-5 w-5 text-emerald-500" />
+                גישת מנהל
+              </h2>
+              <p className="text-sm text-slate-400 mb-6">הזן סיסמת הרשאה למעבר לדף ניהול המערכת.</p>
+              
+              <form onSubmit={handleAdminAuth} className="space-y-4">
+                <div>
+                  <input
+                    type="password"
+                    autoFocus
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors text-center tracking-[1em] text-xl font-mono"
+                    placeholder="****"
+                    value={adminPwd}
+                    onChange={(e) => setAdminPwd(e.target.value)}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11">
+                  כניסה לניהול צוות
+                </Button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showCelebration && (
           <motion.div
@@ -340,6 +406,18 @@ export default function OrdersBoard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          
+          {/* כפתור גלגל שיניים לגישת מנהל */}
+          <Button
+            onClick={() => setShowAdminAuth(true)}
+            variant="outline"
+            size="icon"
+            className="flex items-center justify-center font-bold shadow-sm cursor-pointer border-slate-700 hover:bg-slate-800"
+            title="ניהול מערכת ומשתמשים"
+          >
+            <Settings className="h-5 w-5 text-slate-300" />
+          </Button>
+
           <Button
             onClick={() => setViewMode(viewMode === "live" ? "history" : "live")}
             variant="outline"
@@ -398,7 +476,6 @@ export default function OrdersBoard() {
         </Card>
       </div>
 
-      {/* מאזן עומס נהגים בשטח */}
       <div className={`mb-6 p-4 rounded-xl border ${t.cardBg} ${t.cardBorder} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-sm`}>
         <div className={`text-sm font-bold ${t.heading} flex items-center gap-2`}>
           <Truck className="h-5 w-5 text-emerald-500" />
