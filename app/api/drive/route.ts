@@ -1,36 +1,34 @@
 import { NextResponse } from 'next/server';
+import { google } from 'googleapis';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const fileId = searchParams.get('fileId');
 
-  if (!fileId) {
-    return NextResponse.json({ error: 'Missing fileId' }, { status: 400 });
-  }
+  if (!fileId) return NextResponse.json({ error: 'Missing fileId' }, { status: 400 });
 
   try {
-    // השתמש במפתח API של גוגל כדי לגשת לקבצים פומביים, או ב-Service Account לקבצים סגורים
-    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; 
-    
-    // קריאה ישירה להורדת הקובץ מ-Google Drive API
-    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_API_KEY}`);
-    
-    if (!response.ok) {
-      throw new Error(`Google Drive API responded with status ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    
-    // מחזירים את הקובץ ישירות לדפדפן של הלקוח בצורה חלקה
-    return new NextResponse(arrayBuffer, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="invoice-${fileId}.pdf"`,
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       },
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     });
 
+    const drive = google.drive({ version: 'v3', auth });
+
+    const response = await drive.files.get(
+      { fileId: fileId, alt: 'media' },
+      { responseType: 'arraybuffer' }
+    );
+
+    return new NextResponse(response.data as ArrayBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+      },
+    });
   } catch (error) {
-    console.error("Drive Fetch Error:", error);
-    return NextResponse.json({ error: 'Failed to fetch PDF from Drive' }, { status: 500 });
+    return NextResponse.json({ error: 'Drive connection failed' }, { status: 500 });
   }
 }
