@@ -32,6 +32,11 @@ export interface Order {
   createdAt: string;
 }
 
+export default function OrdersBoard() {
+  const router = useRouter();
+
+
+
 const STATUS_LABELS: Record<Order["status"], string> = {
   pending: "ממתין",
   preparing: "בהכנה",
@@ -317,7 +322,8 @@ export default function OrdersBoard() {
         pipelineBg: "bg-slate-200",
         pipelineEmpty: "bg-white",
         pipelineBorder: "border-slate-300",
-      };
+      
+    
 export default function OrdersBoard() {
   const router = useRouter();
   const getKpiCardStyle = (targetStatus: string, ringColor: string) => {
@@ -326,7 +332,42 @@ export default function OrdersBoard() {
       isActive ? `ring-2 ${ringColor} shadow-md` : "hover:-translate-y-1 hover:shadow-sm opacity-80 hover:opacity-100"
     } ${t.cardBg} ${t.cardBorder}`;
   };
+return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-slate-950" dir="rtl">
+        <Sidebar className="border-r border-slate-800">
+          <SidebarContent className="bg-slate-900 pt-4">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => router.push('/management')}>
+                  <LayoutDashboard className="size-4" /> לוח סידור
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => router.push('/invoices')}>
+                  <FileText className="size-4" /> תעודות משלוח
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
 
+        <main className="flex-1 p-6">
+          <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <h1 className="text-3xl font-black text-white">לוח הזמנות</h1>
+            <Button onClick={() => router.push('/invoices')} className="bg-blue-600 hover:bg-blue-700">
+              תעודות משלוח
+            </Button>
+          </div>
+          
+          <motion.div layout className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* תוכן הלוח */}
+          </motion.div>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
+}
   return (
     <div className={`p-6 min-h-screen transition-colors duration-500 relative ${t.page}`} dir="rtl">
       
