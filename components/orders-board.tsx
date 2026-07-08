@@ -13,15 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import UsersManagement from "@/components/management";
 
-export const metadata = {
-  title: "ניהול הרשאות וצוות | SabanOS",
-};
-
-export default function ManagementPage() {
-  return <UsersManagement />;
-}
 export interface Order {
   id: string;
   orderNumber: string;
