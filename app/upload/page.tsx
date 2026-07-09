@@ -1,63 +1,80 @@
-import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import { adminDb } from '@/lib/firebase-admin';
-import { Readable } from 'stream';
+"use client";
 
-export async function POST(request: Request) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+import React, { useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
-    if (!file) {
-      return NextResponse.json({ error: 'לא נמצא קובץ להעלאה' }, { status: 400 });
+export default function UploadPage() {
+  const [uploading, setUploading] = useState(false);
+
+  const onDrop = async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // שליחה לצינור השרת המאובטח שלנו
+      const response = await fetch("/api/upload-to-drive", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success(`הקובץ ${file.name} הועלה ישירות לדרייב ולמאגר!`);
+      } else {
+        throw new Error(result.error || "שגיאה בשרת העלאה");
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "כשל בהעלאת התעודה");
+    } finally {
+      setUploading(false);
     }
+  };
 
-    // חיבור לגוגל דרייב עם ה-Service Account
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'],
-    });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "application/pdf": [".pdf"] },
+    multiple: false,
+  });
 
-    const drive = google.drive({ version: 'v3', auth });
+  return (
+    <div className="p-10 flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white" dir="rtl">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-black mb-2 tracking-tight">שער העלאת תעודות משלוח</h1>
+        <p className="text-slate-400 text-sm">הקובץ נשלח ישירות לתיקיית המאגר המרכזית ב-Google Drive</p>
+      </div>
 
-    // המרת הקובץ לצינור נתונים (Stream) שהדרייב יודע לקרוא
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const stream = Readable.from(buffer);
-
-    // העלאה ישירה לתיקייה המוגדרת במאגר
-    const driveResponse = await drive.files.create({
-      requestBody: {
-        name: file.name,
-        parents: ['1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP'], // התיקייה המאוחדת שלך
-      },
-      media: {
-        mimeType: file.type || 'application/pdf',
-        body: stream,
-      },
-      fields: 'id, name',
-    });
-
-    const driveId = driveResponse.data.id;
-
-    if (!driveId) {
-      throw new Error('כשל בקבלת מזהה קובץ מגוגל דרייב');
-    }
-
-    // רישום מיידי ב-Firestore כדי שהתעודה תופיע בלוח בזמן אמת
-    await adminDb.collection("invoices").doc(driveId).set({
-      name: file.name,
-      driveId: driveId,
-      uploadedAt: new Date().toISOString(),
-      status: "pending"
-    });
-
-    return NextResponse.json({ success: true, driveId });
-  } catch (error: any) {
-    console.error('Drive Upload Error:', error);
-    return NextResponse.json({ error: 'העלאה לדרייב נכשלה', details: error.message }, { status: 500 });
-  }
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed p-16 rounded-2xl cursor-pointer transition-all text-center w-full max-w-xl bg-slate-900 shadow-2xl ${
+          isDragActive ? "border-emerald-500 bg-slate-900/50 scale-[1.01]" : "border-slate-800 hover:border-slate-700"
+        }`}
+      >
+        <input {...getInputProps()} />
+        {uploading ? (
+          <div className="space-y-4">
+            <Loader2 className="animate-spin size-12 mx-auto text-emerald-500" />
+            <p className="text-lg font-bold text-emerald-400 animate-pulse">מזרים קובץ לשרת ולדרייב...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Upload className={`size-12 mx-auto transition-colors ${isDragActive ? "text-emerald-500" : "text-slate-500"}`} />
+            <div className="space-y-1">
+              <p className="text-lg font-bold text-slate-200">
+                {isDragActive ? "שחרר את הקובץ כאן..." : "גרור לכאן תעודת משלוח (PDF)"}
+              </p>
+              <p className="text-xs text-slate-500">או לחץ לבחירת קובץ מהמכשיר</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
