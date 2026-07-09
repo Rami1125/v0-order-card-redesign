@@ -12,7 +12,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'לא נמצא קובץ להעלאה' }, { status: 400 });
     }
 
-    // חיבור לגוגל דרייב עם ה-Service Account
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -23,16 +22,14 @@ export async function POST(request: Request) {
 
     const drive = google.drive({ version: 'v3', auth });
 
-    // המרת הקובץ לצינור נתונים (Stream) שהדרייב יודע לקרוא
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const stream = Readable.from(buffer);
 
-    // העלאה ישירה לתיקייה המוגדרת במאגר
     const driveResponse = await drive.files.create({
       requestBody: {
         name: file.name,
-        parents: ['1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP'], // התיקייה המאוחדת שלך
+        parents: ['1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP'], // תיקיית היעד
       },
       media: {
         mimeType: file.type || 'application/pdf',
@@ -47,7 +44,6 @@ export async function POST(request: Request) {
       throw new Error('כשל בקבלת מזהה קובץ מגוגל דרייב');
     }
 
-    // רישום מיידי ב-Firestore כדי שהתעודה תופיע בלוח בזמן אמת
     await adminDb.collection("invoices").doc(driveId).set({
       name: file.name,
       driveId: driveId,
@@ -57,7 +53,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, driveId });
   } catch (error: any) {
-    console.error('Drive Upload Error:', error);
-    return NextResponse.json({ error: 'העלאה לדרייב נכשלה', details: error.message }, { status: 500 });
+    console.error('CRITICAL ERROR UPLOADING TO DRIVE:', error);
+    // עכשיו נחזיר את השגיאה המדויקת של גוגל לפרונטאנד כדי שנראה אותה בדפדפן
+    return NextResponse.json({ 
+      error: 'העלאה לדרייב נכשלה', 
+      details: error.message || JSON.stringify(error) 
+    }, { status: 500 });
   }
 }
