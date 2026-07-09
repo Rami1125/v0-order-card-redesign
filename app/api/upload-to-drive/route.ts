@@ -29,7 +29,8 @@ export async function POST(request: Request) {
     const driveResponse = await drive.files.create({
       requestBody: {
         name: file.name,
-        parents: ['1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP'], // תיקיית היעד
+        // התיקייה החדשה ששיתפת עכשיו
+        parents: ['1AlfBEjzBbmhSVmmEj6nCuxRHENUZ4Ks0'], 
       },
       media: {
         mimeType: file.type || 'application/pdf',
@@ -54,7 +55,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, driveId });
   } catch (error: any) {
     console.error('CRITICAL ERROR UPLOADING TO DRIVE:', error);
-    // עכשיו נחזיר את השגיאה המדויקת של גוגל לפרונטאנד כדי שנראה אותה בדפדפן
     return NextResponse.json({ 
       error: 'העלאה לדרייב נכשלה', 
       details: error.message || JSON.stringify(error) 
