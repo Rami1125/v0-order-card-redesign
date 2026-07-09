@@ -1,64 +1,63 @@
-"use client";
+import { NextResponse } from 'next/server';
+import { google } from 'googleapis';
+import { adminDb } from '@/lib/firebase-admin';
+import { Readable } from 'stream';
 
-import React, { useState } from "react";
-import { useDropzone } from "react-dropzone";
-import { ref, uploadBytes } from "firebase/storage";
-import { storage, db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
-import { Upload, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
 
-export default function UploadPage() {
-  const [uploading, setUploading] = useState(false);
-
-  const onDrop = async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    
-    setUploading(true);
-    
-    try {
-      // העלאה ישירה ובטוחה ל-Firebase Storage (עוקף בעיות CORS)
-      const storageRef = ref(storage, `invoices/${file.name}`);
-      await uploadBytes(storageRef, file);
-      
-      // עדכון מאגר הנתונים ב-SabanOS
-      await setDoc(doc(db, "invoices", file.name), {
-        name: file.name,
-        path: `invoices/${file.name}`,
-        uploadedAt: new Date().toISOString(),
-        status: "pending"
-      });
-
-      toast.success("התעודה הועלתה בהצלחה!");
-    } catch (e) {
-      console.error("Upload error:", e);
-      toast.error("שגיאה בהעלאת התעודה");
-    } finally {
-      setUploading(false);
+    if (!file) {
+      return NextResponse.json({ error: 'לא נמצא קובץ להעלאה' }, { status: 400 });
     }
-  };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop });
+    // חיבור לגוגל דרייב עם ה-Service Account
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'],
+    });
 
-  return (
-    <div className="p-10 flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white" dir="rtl">
-      <h1 className="text-3xl font-black mb-8">העלאת תעודת משלוח</h1>
-      
-      <div 
-        {...getRootProps()} 
-        className="border-2 border-dashed border-slate-700 p-20 rounded-xl cursor-pointer hover:border-emerald-500 transition-all text-center w-full max-w-xl bg-slate-900"
-      >
-        <input {...getInputProps()} />
-        {uploading ? (
-          <Loader2 className="animate-spin size-12 mx-auto mb-4 text-emerald-500" />
-        ) : (
-          <Upload className="size-12 mx-auto mb-4 text-slate-400" />
-        )}
-        <p className="text-lg font-medium text-slate-300">
-          {uploading ? "מעלה תעודה, אנא המתן..." : "גרור לכאן תעודת משלוח (PDF) או לחץ לבחירה"}
-        </p>
-      </div>
-    </div>
-  );
+    const drive = google.drive({ version: 'v3', auth });
+
+    // המרת הקובץ לצינור נתונים (Stream) שהדרייב יודע לקרוא
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const stream = Readable.from(buffer);
+
+    // העלאה ישירה לתיקייה המוגדרת במאגר
+    const driveResponse = await drive.files.create({
+      requestBody: {
+        name: file.name,
+        parents: ['1FX8kT8iwqXPIP9hZv4m3Jz1YBfIJfnJP'], // התיקייה המאוחדת שלך
+      },
+      media: {
+        mimeType: file.type || 'application/pdf',
+        body: stream,
+      },
+      fields: 'id, name',
+    });
+
+    const driveId = driveResponse.data.id;
+
+    if (!driveId) {
+      throw new Error('כשל בקבלת מזהה קובץ מגוגל דרייב');
+    }
+
+    // רישום מיידי ב-Firestore כדי שהתעודה תופיע בלוח בזמן אמת
+    await adminDb.collection("invoices").doc(driveId).set({
+      name: file.name,
+      driveId: driveId,
+      uploadedAt: new Date().toISOString(),
+      status: "pending"
+    });
+
+    return NextResponse.json({ success: true, driveId });
+  } catch (error: any) {
+    console.error('Drive Upload Error:', error);
+    return NextResponse.json({ error: 'העלאה לדרייב נכשלה', details: error.message }, { status: 500 });
+  }
 }
