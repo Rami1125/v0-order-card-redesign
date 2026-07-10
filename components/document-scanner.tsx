@@ -1,126 +1,132 @@
-import React, { useState, useRef } from 'react';
-// יש לעדכן את הנתיב לקובץ הקונפיגורציה של Firebase בפרויקט שלך
-import { storage, db } from '../firebase/config'; 
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc } from 'firebase/firestore';
+"use client"
 
-export default function DocumentScanner({ deliveryNumber, driverName = "חכמת" }) {
-  const [image, setImage] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [message, setMessage] = useState('');
-  const canvasRef = useRef(null);
+import React, { useState, useRef } from 'react'
+import { storage, db } from "@/lib/firebase" 
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'
+import { collection, addDoc } from 'firebase/firestore'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle } from "lucide-react"
 
-  // פתיחת מצלמה ולכידת התמונה
-  const handleCapture = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => processImage(img);
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // כיווץ ועיבוד התמונה לתצורה שמתאימה למסמך
-  const processImage = (img) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    // הגבלת רוחב כדי למנוע קבצים כבדים מדי
-    const MAX_WIDTH = 1200;
-    const scale = MAX_WIDTH / img.width;
-    canvas.width = MAX_WIDTH;
-    canvas.height = img.height * scale;
-
-    // ציור מחדש על הקנבס
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    
-    // המרה ל-Base64 בפורמט JPEG עם איכות 70%
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-    setImage(dataUrl);
-  };
-
-  // העלאה ישירה ל-SabanOS
-  const uploadToSabanOS = async () => {
-    if (!image) return;
-    setIsUploading(true);
-    setMessage('');
-    
-    try {
-      // יצירת שם ייחודי לקובץ
-      const fileName = `delivery_notes/scan_${deliveryNumber}_${Date.now()}.jpg`;
-      const storageRef = ref(storage, fileName);
-      
-      // העלאה ל-Storage
-      await uploadString(storageRef, image, 'data_url');
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      // שמירת הרשומה ב-Firestore
-      await addDoc(collection(db, 'scans'), {
-        deliveryNumber: deliveryNumber,
-        driverName: driverName,
-        fileUrl: downloadURL,
-        timestamp: new Date()
-      });
-      
-      setMessage('התעודה נסרקה ועלתה ל-SabanOS בהצלחה!');
-      setImage(null);
-    } catch (error) {
-      console.error('Upload Error:', error);
-      setMessage('שגיאה בהעלאה, נסה שוב.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  return (
-    <div style={{ padding: '20px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h2 style={{ textAlign: 'center' }}>סורק תעודות - משאית</h2>
-      
-      {/* Input נסתר שפותח את המצלמה האחורית בנייד */}
-      <input 
-        type="file" 
-        accept="image/*" 
-        capture="environment" 
-        onChange={handleCapture}
-        style={{ display: 'none' }}
-        id="cameraInput"
-      />
-      
-      {!image ? (
-        <label htmlFor="cameraInput" style={btnPrimaryStyle}>
-          📷 פתח מצלמה לסריקה
-        </label>
-      ) : (
-        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-          <img src={image} alt="Scanned Document" style={{ width: '100%', border: '1px solid #ddd', borderRadius: '8px' }} />
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-            <button onClick={uploadToSabanOS} disabled={isUploading} style={btnSuccessStyle}>
-              {isUploading ? 'מעלה...' : '📤 שלח מערכת'}
-            </button>
-            <button onClick={() => setImage(null)} disabled={isUploading} style={btnDangerStyle}>
-              🗑️ סרוק מחדש
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {message && <p style={{ marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>{message}</p>}
-      
-      {/* Canvas נסתר לעיבוד התמונה */}
-      <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
-    </div>
-  );
+interface DocumentScannerProps {
+  deliveryNumber: string;
+  driverName?: string;
 }
 
-// סטיילים לכפתורים
-const baseBtn = {
-  display: 'block', width: '100%', padding: '15px', color: '#fff', 
-  textAlign: 'center', borderRadius: '8px', cursor: 'pointer', border: 'none', fontSize: '16px', fontWeight: 'bold'
-};
-const btnPrimaryStyle = { ...baseBtn, backgroundColor: '#0070f3' };
-const btnSuccessStyle = { ...baseBtn, backgroundColor: '#28a745' };
-const btnDangerStyle = { ...baseBtn, backgroundColor: '#dc3545' };
+export default function DocumentScanner({ deliveryNumber, driverName = "חכמת" }: DocumentScannerProps) {
+  const [image, setImage] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | '', text: string }>({ type: '', text: '' })
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  const handleCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => processImage(img)
+        img.src = e.target?.result as string
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const processImage = (img: HTMLImageElement) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    
+    const MAX_WIDTH = 1200
+    const scale = MAX_WIDTH / img.width
+    canvas.width = MAX_WIDTH
+    canvas.height = img.height * scale
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+    setImage(dataUrl)
+  }
+
+  const uploadToSabanOS = async () => {
+    if (!image) return
+    setIsUploading(true)
+    setStatus({ type: '', text: '' })
+    
+    try {
+      const fileName = `delivery_notes/scan_${deliveryNumber}_${Date.now()}.jpg`
+      const storageRef = ref(storage, fileName)
+      
+      await uploadString(storageRef, image, 'data_url')
+      const downloadURL = await getDownloadURL(storageRef)
+      
+      await addDoc(collection(db, 'scans'), {
+        deliveryNumber,
+        driverName,
+        fileUrl: downloadURL,
+        timestamp: new Date()
+      })
+      
+      setStatus({ type: 'success', text: 'התעודה נסרקה ועלתה ל-SabanOS בהצלחה!' })
+      setImage(null)
+    } catch (error) {
+      console.error('Upload Error:', error)
+      setStatus({ type: 'error', text: 'שגיאה בהעלאה, נסה שוב.' })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  return (
+    <Card className="w-full max-w-md mx-auto text-right" dir="rtl">
+      <CardHeader>
+        <CardTitle className="text-center text-xl font-bold">סורק תעודות משאית</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          onChange={handleCapture}
+          className="hidden" 
+          id="cameraInput"
+        />
+        
+        {!image ? (
+          <label htmlFor="cameraInput" className="flex items-center justify-center gap-2 w-full p-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md cursor-pointer font-medium transition-colors text-center">
+            <Camera className="h-5 w-5" />
+            <span>פתח מצלמה לסריקה</span>
+          </label>
+        ) : (
+          <div className="space-y-4 text-center">
+            <div className="overflow-hidden rounded-lg border border-border">
+              <img src={image} alt="Scanned Document" className="w-full h-auto max-h-64 object-contain bg-muted" />
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={uploadToSabanOS} disabled={isUploading} className="flex-1 gap-2">
+                <Upload className="h-4 w-4" />
+                {isUploading ? 'מעלה...' : 'שלח למערכת'}
+              </Button>
+              <Button onClick={() => setImage(null)} disabled={isUploading} variant="destructive" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                סרוק מחדש
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {status.text && (
+          <div className={`p-3 rounded-md flex items-center gap-2 text-sm font-medium ${
+            status.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-destructive/10 text-destructive'
+          }`}>
+            {status.type === 'success' ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            <span>{status.text}</span>
+          </div>
+        )}
+        
+        <canvas ref={canvasRef} className="hidden"></canvas>
+      </CardContent>
+    </Card>
+  )
+}
