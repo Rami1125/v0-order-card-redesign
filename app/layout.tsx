@@ -9,9 +9,9 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'מערכת לוגיסטיקה | Logistics Dashboard',
+  title: 'סידור | ח.סבן',
   description: 'מערכת בקרה ומעקב הזמנות בזמן אמת',
-  generator: 'v0.app',
+  generator: 'נועה',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
