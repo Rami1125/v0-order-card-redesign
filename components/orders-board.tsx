@@ -90,7 +90,7 @@ export default function OrdersBoard() {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(150));
+    const q = query(collection(db, "orders"),status: { stringValue: "pending" }, orderBy("timestamp", "desc"), limit(150));
 
     const unsubscribe = onSnapshot(
       q,
